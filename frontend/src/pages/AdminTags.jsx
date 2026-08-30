@@ -116,7 +116,33 @@ function TagCard({ tag, rooms, origin, onChanged, onError }) {
   const [detailClue, setDetailClue] = useState(tag.detailClue || '');
   const [isGold, setIsGold] = useState(tag.isGold);
   const [saving, setSaving] = useState(false);
+  const [copied, setCopied] = useState(false);
   const dirty = roomId !== (tag.roomId || '') || detailClue !== (tag.detailClue || '') || isGold !== tag.isGold;
+  const tagUrl = `${origin}/t/${tag.id}`;
+
+  const copyUrl = async () => {
+    try {
+      if (navigator.clipboard?.writeText) {
+        await navigator.clipboard.writeText(tagUrl);
+      } else {
+        // The async clipboard API needs a secure context, so fall back for
+        // plain-HTTP LAN access to the admin page.
+        const field = document.createElement('textarea');
+        field.value = tagUrl;
+        field.setAttribute('readonly', '');
+        field.style.position = 'fixed';
+        field.style.opacity = '0';
+        document.body.appendChild(field);
+        field.select();
+        document.execCommand('copy');
+        document.body.removeChild(field);
+      }
+      setCopied(true);
+      setTimeout(() => setCopied(false), 1500);
+    } catch {
+      onError('Could not copy automatically — select the URL and copy it manually.');
+    }
+  };
 
   const patch = async (body) => {
     setSaving(true);
@@ -188,7 +214,12 @@ function TagCard({ tag, rooms, origin, onChanged, onError }) {
 
       <div className="tag-card-url">
         <span className="tag-card-url-label">Write this URL to the NFC tag:</span>
-        <span className="mono">{`${origin}/t/${tag.id}`}</span>
+        <div className="tag-card-url-row">
+          <span className="mono">{tagUrl}</span>
+          <button type="button" className="copy-button" onClick={copyUrl} title="Copy URL">
+            {copied ? '✅ Copied' : '📋 Copy'}
+          </button>
+        </div>
       </div>
     </div>
   );

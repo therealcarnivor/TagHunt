@@ -783,6 +783,24 @@ button.danger {
   display: block;
 }
 
+.tag-card-url-row {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.tag-card-url-row .mono {
+  flex: 1;
+  min-width: 0;
+}
+
+.copy-button {
+  flex-shrink: 0;
+  padding: 0.3rem 0.6rem;
+  font-size: 0.8rem;
+  background: var(--secondary-button);
+}
+
 .hint-box {
   margin-top: 1rem;
   padding: 0.75rem 1rem;
