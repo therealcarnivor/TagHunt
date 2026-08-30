@@ -72,8 +72,16 @@ export function scanTag(tagId) {
   return request(`/tags/${encodeURIComponent(tagId)}/scan`, { method: 'POST' });
 }
 
-export function getHint() {
-  return request('/tags/hint');
+export function getHints() {
+  return request('/tags/hints');
+}
+
+export function requestNewHint() {
+  return request('/tags/hints', { method: 'POST' });
+}
+
+export function revealHintDetail(tagId) {
+  return request(`/tags/hints/${encodeURIComponent(tagId)}/reveal`, { method: 'POST' });
 }
 
 export function getFoundTags() {

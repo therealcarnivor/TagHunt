@@ -41,31 +41,35 @@ function scanBlockReason(settings) {
   return null;
 }
 
-// Two-stage clue system: the first hint request for a "target" tag reveals
-// its room, a repeat request escalates to the more detailed clue. The same
-// target tag is stuck with until found, so clues don't jump around.
-function pickHint(playerId) {
-  const active = db
+// Players can hold clues for several tags at once. Each hinted tag starts
+// with its room clue and can be escalated to the detailed clue; both stay
+// visible until that tag is found.
+function activeHints(playerId) {
+  return db
     .prepare(
-      `SELECT h.tag_id AS tagId, h.stage AS stage, r.name AS roomName, t.detail_clue AS detailClue
+      `SELECT h.tag_id AS tagId, h.stage AS stage, r.id AS roomId, r.name AS roomName,
+              t.detail_clue AS detailClue
        FROM player_hints h
        JOIN tags t ON t.id = h.tag_id
        LEFT JOIN rooms r ON r.id = t.room_id
        WHERE h.player_id = ?
          AND t.is_enabled = 1
-         AND h.tag_id NOT IN (SELECT tag_id FROM finds WHERE player_id = ?)`
+         AND h.tag_id NOT IN (SELECT tag_id FROM finds WHERE player_id = ?)
+       ORDER BY r.name COLLATE NOCASE ASC, h.rowid ASC`
     )
-    .get(playerId, playerId);
+    .all(playerId, playerId)
+    .map((h) => ({
+      tagId: h.tagId,
+      roomId: h.roomId,
+      roomName: h.roomName,
+      roomClue: h.roomName ? `Check the ${h.roomName}.` : null,
+      detailClue: h.stage >= 2 ? h.detailClue : null,
+      canRevealMore: h.stage < 2 && Boolean(h.detailClue && h.detailClue.trim()),
+    }));
+}
 
-  if (active) {
-    if (active.stage === 1 && active.detailClue) {
-      db.prepare('INSERT INTO hint_uses (player_id, tag_id, stage) VALUES (?, ?, 2)').run(playerId, active.tagId);
-      db.prepare('UPDATE player_hints SET stage = 2 WHERE player_id = ? AND tag_id = ?').run(playerId, active.tagId);
-      return active.detailClue;
-    }
-    return active.detailClue || (active.roomName ? `Check the ${active.roomName}.` : null);
-  }
-
+// Picks a tag the player hasn't found and isn't already holding a clue for.
+function startHint(playerId) {
   const candidate = db
     .prepare(
       `SELECT t.id, r.name AS roomName, t.detail_clue AS detailClue
@@ -73,16 +77,18 @@ function pickHint(playerId) {
        WHERE t.is_enabled = 1
          AND (r.name IS NOT NULL OR (t.detail_clue IS NOT NULL AND TRIM(t.detail_clue) <> ''))
          AND t.id NOT IN (SELECT tag_id FROM finds WHERE player_id = ?)
+         AND t.id NOT IN (SELECT tag_id FROM player_hints WHERE player_id = ?)
        ORDER BY RANDOM() LIMIT 1`
     )
-    .get(playerId);
+    .get(playerId, playerId);
 
   if (!candidate) return null;
 
+  // Tags with no room fall straight to stage 2 since that's all they have.
   const stage = candidate.roomName ? 1 : 2;
   db.prepare('INSERT INTO player_hints (player_id, tag_id, stage) VALUES (?, ?, ?)').run(playerId, candidate.id, stage);
   db.prepare('INSERT INTO hint_uses (player_id, tag_id, stage) VALUES (?, ?, ?)').run(playerId, candidate.id, stage);
-  return candidate.roomName ? `Check the ${candidate.roomName}.` : candidate.detailClue;
+  return candidate.id;
 }
 
 // Total tag count, used by the client to render an overall progress bar.
@@ -118,13 +124,50 @@ tagsRouter.get('/rooms-progress', (req, res) => {
   });
 });
 
-// A kid can request a fresh hint any time between finds.
-tagsRouter.get('/hint', requireAuth, (req, res) => {
+// Every clue the player is currently holding.
+tagsRouter.get('/hints', requireAuth, (req, res) => {
+  res.json({ hints: activeHints(req.player.id) });
+});
+
+// Start a clue for another tag, keeping any clues already held.
+tagsRouter.post('/hints', requireAuth, (req, res) => {
   const blockReason = scanBlockReason(getGameSettings());
-  if (blockReason) {
-    return res.json({ hint: null });
+  if (blockReason) return res.status(403).json({ error: blockReason });
+
+  const startedTagId = startHint(req.player.id);
+  res.json({
+    hints: activeHints(req.player.id),
+    startedTagId,
+    message: startedTagId ? null : "No new clues available — you've got a clue for every tag you haven't found yet.",
+  });
+});
+
+// Escalate one tag's clue from its room to the detailed hiding place.
+tagsRouter.post('/hints/:tagId/reveal', requireAuth, (req, res) => {
+  const blockReason = scanBlockReason(getGameSettings());
+  if (blockReason) return res.status(403).json({ error: blockReason });
+
+  const playerId = req.player.id;
+  const { tagId } = req.params;
+  const hint = db
+    .prepare(
+      `SELECT h.stage AS stage, t.detail_clue AS detailClue
+       FROM player_hints h JOIN tags t ON t.id = h.tag_id
+       WHERE h.player_id = ? AND h.tag_id = ? AND t.is_enabled = 1`
+    )
+    .get(playerId, tagId);
+
+  if (!hint) return res.status(404).json({ error: "You don't have a clue for that tag." });
+  if (!hint.detailClue?.trim()) {
+    return res.status(400).json({ error: 'There is no extra detail for this tag.' });
   }
-  res.json({ hint: pickHint(req.player.id) });
+
+  if (hint.stage < 2) {
+    db.prepare('UPDATE player_hints SET stage = 2 WHERE player_id = ? AND tag_id = ?').run(playerId, tagId);
+    db.prepare('INSERT INTO hint_uses (player_id, tag_id, stage) VALUES (?, ?, 2)').run(playerId, tagId);
+  }
+
+  res.json({ hints: activeHints(playerId) });
 });
 
 // List of tags a player has already found, for their profile page.
@@ -191,7 +234,6 @@ tagsRouter.post('/:tagId/scan', requireAuth, (req, res) => {
     alreadyFound,
     pointsAwarded: alreadyFound ? 0 : pointsForFind(player.id, tagId, { justCompletedHunt: gameJustCompleted }),
     progress: progressFor(player.id),
-    hint: gameJustCompleted ? null : pickHint(player.id),
     gameJustCompleted,
   });
 });

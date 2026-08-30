@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'react';
 import { usePlayer } from '../context/PlayerContext.jsx';
-import { getTagTotal, getHint, getGameSettings } from '../api.js';
+import { getTagTotal, getGameSettings } from '../api.js';
 import { getLeaderboard, getAchievements, getRoomsProgress } from '../api.js';
+import { getHints, requestNewHint, revealHintDetail } from '../api.js';
 import ProgressBar from '../components/ProgressBar.jsx';
 import Countdown from '../components/Countdown.jsx';
 
@@ -10,8 +11,10 @@ export default function Home() {
   const [error, setError] = useState('');
   const [totalTags, setTotalTags] = useState(0);
   const [found, setFound] = useState(0);
-  const [hint, setHint] = useState(null);
+  const [hints, setHints] = useState([]);
+  const [hintNotice, setHintNotice] = useState('');
   const [hintBusy, setHintBusy] = useState(false);
+  const [revealBusyId, setRevealBusyId] = useState(null);
   const [achievements, setAchievements] = useState([]);
   const [rooms, setRooms] = useState([]);
   const [gameSettings, setGameSettings] = useState({ startTime: null, endTime: null, completedAt: null, winnerName: null });
@@ -46,6 +49,13 @@ export default function Home() {
         .then((d) => {
           if (cancelled) return;
           setRooms(d.rooms || []);
+        })
+        .catch(() => {});
+      // Refetched on every find so clues for found tags disappear.
+      getHints()
+        .then((d) => {
+          if (cancelled) return;
+          setHints(d.hints || []);
         })
         .catch(() => {});
     };
@@ -132,9 +142,11 @@ export default function Home() {
         onClick={async () => {
           setHintBusy(true);
           setError('');
+          setHintNotice('');
           try {
-            const data = await getHint();
-            setHint(data.hint || "No clues left — you'll have to explore!");
+            const data = await requestNewHint();
+            setHints(data.hints || []);
+            if (data.message) setHintNotice(data.message);
           } catch (err) {
             setError(err.message);
           } finally {
@@ -143,10 +155,60 @@ export default function Home() {
         }}
         disabled={hintBusy}
       >
-        {hintBusy ? 'Thinking...' : 'Get a hint 💡'}
+        {hintBusy ? 'Thinking...' : hints.length ? 'Get a clue for another tag 💡' : 'Get a hint 💡'}
       </button>
-      {hint && <p className="hint-box">🔍 {hint}</p>}
+      {hintNotice && <p className="center-note">{hintNotice}</p>}
+
+      {hints.length > 0 && (
+        <section className="clue-board">
+          <h2>Your clues</h2>
+          {groupHintsByRoom(hints).map((group) => (
+            <div key={group.key} className="clue-group">
+              <h3 className="clue-group-title">{group.roomName ? `🏠 ${group.roomName}` : '❔ Somewhere else'}</h3>
+              {group.hints.map((h) => (
+                <div key={h.tagId} className="clue-item">
+                  {h.roomClue && <p className="clue-line">🔍 {h.roomClue}</p>}
+                  {h.detailClue && <p className="clue-line clue-detail">🔬 {h.detailClue}</p>}
+                  {h.canRevealMore && (
+                    <button
+                      className="clue-reveal"
+                      disabled={revealBusyId === h.tagId}
+                      onClick={async () => {
+                        setRevealBusyId(h.tagId);
+                        setError('');
+                        setHintNotice('');
+                        try {
+                          const data = await revealHintDetail(h.tagId);
+                          setHints(data.hints || []);
+                        } catch (err) {
+                          setError(err.message);
+                        } finally {
+                          setRevealBusyId(null);
+                        }
+                      }}
+                    >
+                      {revealBusyId === h.tagId ? 'Revealing...' : 'Need more detail? (costs a point)'}
+                    </button>
+                  )}
+                </div>
+              ))}
+            </div>
+          ))}
+        </section>
+      )}
       {error && <p className="error">{error}</p>}
     </div>
   );
+}
+
+// Clues are grouped by room so a player collecting several at once can work
+// through one room at a time.
+function groupHintsByRoom(hints) {
+  const groups = new Map();
+  for (const hint of hints) {
+    const key = hint.roomId || 'unknown';
+    if (!groups.has(key)) groups.set(key, { key, roomName: hint.roomName, hints: [] });
+    groups.get(key).hints.push(hint);
+  }
+  return [...groups.values()];
 }

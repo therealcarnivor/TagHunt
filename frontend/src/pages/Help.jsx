@@ -20,10 +20,20 @@ export default function Help() {
       <section className="help-section">
         <h2>Hints</h2>
         <p>
-          Stuck? Tap <strong>"Get a hint 💡"</strong> on the home page. The first
-          hint for a tag tells you which <strong>room</strong> to search. If you ask
-          again for the same tag, you'll get a more detailed clue. Once you find
-          that tag, your next hint targets a different one.
+          Stuck? Tap <strong>"Get a hint 💡"</strong> on the home page and you'll be
+          told which <strong>room</strong> to search. If that isn't enough, tap
+          <strong> "Need more detail?"</strong> on that clue to reveal exactly where
+          it's hidden.
+        </p>
+        <p>
+          Clues stay on your home page until you find that tag, and they're
+          grouped by room. If you want to give up on one for now, tap
+          <strong> "Get a clue for another tag"</strong> — your existing clues are
+          kept so you can come back to them later.
+        </p>
+        <p>
+          Each clue costs you points when you finally find the tag, so try to
+          use as few as you can.
         </p>
       </section>
 

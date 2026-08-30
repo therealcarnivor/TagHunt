@@ -801,6 +801,50 @@ button.danger {
   background: var(--secondary-button);
 }
 
+.clue-board {
+  margin-top: 1.25rem;
+  text-align: left;
+}
+
+.clue-board h2 {
+  font-size: 1rem;
+  margin: 0 0 0.5rem;
+}
+
+.clue-group {
+  margin-top: 0.75rem;
+  padding: 0.6rem 0.8rem;
+  background: var(--row-bg);
+  border-radius: 12px;
+}
+
+.clue-group-title {
+  margin: 0 0 0.4rem;
+  font-size: 0.9rem;
+}
+
+.clue-item + .clue-item {
+  margin-top: 0.6rem;
+  padding-top: 0.6rem;
+  border-top: 1px solid var(--border);
+}
+
+.clue-line {
+  margin: 0.2rem 0;
+  font-weight: 600;
+}
+
+.clue-detail {
+  color: var(--primary);
+}
+
+.clue-reveal {
+  margin-top: 0.35rem;
+  padding: 0.3rem 0.6rem;
+  font-size: 0.8rem;
+  background: var(--secondary-button);
+}
+
 .hint-box {
   margin-top: 1rem;
   padding: 0.75rem 1rem;
