@@ -31,8 +31,10 @@ leaderboardRouter.get('/', (_req, res) => {
   const players = db.prepare('SELECT id AS playerId, name, avatar FROM players').all();
   const finds = db
     .prepare(
-      `SELECT player_id AS playerId, tag_id AS tagId, found_at AS foundAt
-       FROM finds ORDER BY found_at ASC`
+      `SELECT f.player_id AS playerId, f.tag_id AS tagId, f.found_at AS foundAt
+       FROM finds f JOIN tags t ON t.id = f.tag_id
+       WHERE t.is_enabled = 1
+       ORDER BY f.found_at ASC`
     )
     .all();
   const pointsByFind = computeFindPoints();
@@ -66,7 +68,7 @@ leaderboardRouter.get('/', (_req, res) => {
     return (a.lastFoundAt || '').localeCompare(b.lastFoundAt || '');
   });
 
-  const totalTags = db.prepare('SELECT COUNT(*) AS n FROM tags').get().n;
+  const totalTags = db.prepare('SELECT COUNT(*) AS n FROM tags WHERE is_enabled = 1').get().n;
 
   res.json({ totalTags, players: rows });
 });

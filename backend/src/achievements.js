@@ -13,9 +13,11 @@ function settings() {
 
 function data() {
   const finds = db.prepare(`
-    SELECT player_id AS playerId, tag_id AS tagId, clues_used AS cluesUsed,
-           CAST(strftime('%s', found_at) AS INTEGER) * 1000 AS foundMs
-    FROM finds ORDER BY foundMs ASC, rowid ASC
+    SELECT f.player_id AS playerId, f.tag_id AS tagId, f.clues_used AS cluesUsed,
+           CAST(strftime('%s', f.found_at) AS INTEGER) * 1000 AS foundMs
+    FROM finds f JOIN tags t ON t.id = f.tag_id
+    WHERE t.is_enabled = 1
+    ORDER BY foundMs ASC, f.rowid ASC
   `).all();
   const byPlayer = new Map();
   for (const find of finds) {
@@ -150,7 +152,7 @@ export function computeAchievements() {
   const game = settings();
   const startMs = game.startTime ? new Date(game.startTime).getTime() : null;
   const endMs = game.endTime ? new Date(game.endTime).getTime() : null;
-  const tags = db.prepare('SELECT id, room_id AS roomId, is_gold AS isGold FROM tags').all();
+  const tags = db.prepare('SELECT id, room_id AS roomId, is_gold AS isGold FROM tags WHERE is_enabled = 1').all();
   const roomByTag = new Map(tags.map((tag) => [tag.id, tag.roomId]));
   const goldTags = new Set(tags.filter((tag) => tag.isGold).map((tag) => tag.id));
   const totalRooms = new Set(tags.map((tag) => tag.roomId).filter(Boolean)).size;
@@ -194,7 +196,7 @@ export function progressForPlayer(playerId) {
   const game = settings();
   const startMs = game.startTime ? new Date(game.startTime).getTime() : null;
   const endMs = game.endTime ? new Date(game.endTime).getTime() : null;
-  const tags = db.prepare('SELECT id, room_id AS roomId, is_gold AS isGold FROM tags').all();
+  const tags = db.prepare('SELECT id, room_id AS roomId, is_gold AS isGold FROM tags WHERE is_enabled = 1').all();
   const roomByTag = new Map(tags.map((tag) => [tag.id, tag.roomId]));
   const goldTags = new Set(tags.filter((tag) => tag.isGold).map((tag) => tag.id));
   const { finds } = data();

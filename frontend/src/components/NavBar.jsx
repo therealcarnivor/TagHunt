@@ -3,7 +3,7 @@ import { usePlayer } from '../context/PlayerContext.jsx';
 import { useTheme } from '../context/ThemeContext.jsx';
 
 export default function NavBar() {
-  const { player } = usePlayer();
+  const { player, isAdmin } = usePlayer();
   const { theme, toggleTheme } = useTheme();
   return (
     <nav className="navbar">
@@ -17,6 +17,11 @@ export default function NavBar() {
         <NavLink to="/leaderboard" className="nav-pill-button icon-only" aria-label="Leaderboard" title="Leaderboard">
           🏆
         </NavLink>
+        {isAdmin && (
+          <NavLink to="/admin" className="nav-pill-button icon-only" aria-label="Admin" title="Admin">
+            🛠️
+          </NavLink>
+        )}
         {player && (
           <NavLink to="/profile" className="nav-pill-button icon-only" aria-label="Your profile" title="Your profile">
             {player.avatar || '👤'}
@@ -35,4 +40,3 @@ export default function NavBar() {
     </nav>
   );
 }
-

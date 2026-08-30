@@ -1,7 +1,7 @@
 import { Router } from 'express';
-import { nanoid } from 'nanoid';
 import { db } from '../db.js';
-import { AVATAR_OPTIONS, isValidAvatar, randomAvailableAvatar } from '../avatars.js';
+import { AVATAR_OPTIONS, isValidAvatar } from '../avatars.js';
+import { requireAuth } from '../auth.js';
 
 export const playersRouter = Router();
 
@@ -23,63 +23,19 @@ function takenAvatars(excludePlayerId) {
 // Lists all avatar options plus which ones are already claimed by other
 // players, so the client can grey out unavailable choices.
 playersRouter.get('/avatars', (req, res) => {
-  res.json({ avatars: AVATAR_OPTIONS, taken: takenAvatars(req.query.playerId) });
+  res.json({ avatars: AVATAR_OPTIONS, taken: takenAvatars(req.player?.id) });
 });
 
-// Create a new player identity, or reconnect to an existing one if that name
-// is already in use. NFC/deep-link scans on iOS sometimes open in an
-// ephemeral browser context that has no localStorage, so re-entering your
-// name is the recovery path — this trades strict identity for a low-friction
-// "just type your name again" experience, which is fine for a private party.
-playersRouter.post('/', (req, res) => {
-  const name = sanitizeName(req.body?.name);
-  if (!name) {
-    return res.status(400).json({ error: 'A valid name is required.' });
-  }
-
-  const existing = db
-    .prepare('SELECT id, name, avatar FROM players WHERE name = ? COLLATE NOCASE')
-    .get(name);
-  if (existing) {
-    let avatar = existing.avatar;
-    if (!avatar) {
-      avatar = randomAvailableAvatar(takenAvatars(existing.id));
-      db.prepare('UPDATE players SET avatar = ? WHERE id = ?').run(avatar, existing.id);
-    }
-    return res.status(200).json({ id: existing.id, name: existing.name, avatar });
-  }
-
-  const id = nanoid(12);
-  const avatar = randomAvailableAvatar(takenAvatars());
-  try {
-    db.prepare('INSERT INTO players (id, name, avatar) VALUES (?, ?, ?)').run(id, name, avatar);
-  } catch (err) {
-    if (err.code === 'SQLITE_CONSTRAINT_UNIQUE') {
-      return res.status(409).json({ error: `"${name}" is already taken. Try adding a last initial or nickname.` });
-    }
-    throw err;
-  }
-  res.status(201).json({ id, name, avatar });
-});
-
-// Look up an existing player by token, used to restore session on reload.
-playersRouter.get('/:id', (req, res) => {
-  const player = db.prepare('SELECT id, name, avatar FROM players WHERE id = ?').get(req.params.id);
-  if (!player) return res.status(404).json({ error: 'Player not found.' });
-  res.json(player);
-});
-
-// Lets a player change their own display name and/or avatar.
-playersRouter.patch('/:id', (req, res) => {
-  const existingPlayer = db.prepare('SELECT id, name, avatar FROM players WHERE id = ?').get(req.params.id);
+// Lets the signed-in player change their own display name and/or avatar.
+playersRouter.patch('/me', requireAuth, (req, res) => {
+  const playerId = req.player.id;
+  const existingPlayer = db.prepare('SELECT id, name, avatar FROM players WHERE id = ?').get(playerId);
   if (!existingPlayer) return res.status(404).json({ error: 'Player not found.' });
 
   let name = existingPlayer.name;
   if (req.body?.name !== undefined) {
     name = sanitizeName(req.body.name);
-    if (!name) {
-      return res.status(400).json({ error: 'A valid name is required.' });
-    }
+    if (!name) return res.status(400).json({ error: 'A valid name is required.' });
   }
 
   let avatar = existingPlayer.avatar;
@@ -87,26 +43,24 @@ playersRouter.patch('/:id', (req, res) => {
     if (!isValidAvatar(req.body.avatar)) {
       return res.status(400).json({ error: 'Not a valid avatar choice.' });
     }
-    if (req.body.avatar !== existingPlayer.avatar && takenAvatars(req.params.id).includes(req.body.avatar)) {
+    if (req.body.avatar !== existingPlayer.avatar && takenAvatars(playerId).includes(req.body.avatar)) {
       return res.status(409).json({ error: 'Someone already picked that avatar. Choose another!' });
     }
     avatar = req.body.avatar;
   }
 
-  const clash = db
-    .prepare('SELECT 1 FROM players WHERE name = ? COLLATE NOCASE AND id != ?')
-    .get(name, req.params.id);
-  if (clash) {
+  if (db.prepare('SELECT 1 FROM players WHERE name = ? COLLATE NOCASE AND id != ?').get(name, playerId)) {
     return res.status(409).json({ error: `"${name}" is already taken. Try adding a last initial or nickname.` });
   }
 
   try {
-    db.prepare('UPDATE players SET name = ?, avatar = ? WHERE id = ?').run(name, avatar, req.params.id);
+    db.prepare('UPDATE players SET name = ?, avatar = ? WHERE id = ?').run(name, avatar, playerId);
   } catch (err) {
-    if (err.code === 'SQLITE_CONSTRAINT_UNIQUE') {
-      return res.status(409).json({ error: `"${name}" is already taken. Try adding a last initial or nickname.` });
+    if (err.code?.startsWith('SQLITE_CONSTRAINT')) {
+      return res.status(409).json({ error: 'That name or avatar is already taken.' });
     }
     throw err;
   }
-  res.json({ id: req.params.id, name, avatar });
+
+  res.json({ id: playerId, name, avatar, username: req.player.username, isAdmin: req.player.isAdmin });
 });

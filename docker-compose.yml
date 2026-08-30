@@ -1,18 +1,16 @@
 services:
-  taghunt:
+  taghuntdev:
     build: .
-    container_name: taghunt
+    container_name: taghuntdev
     restart: unless-stopped
     ports:
-      - "3001:3000"
+      - "3002:3000"
     environment:
-      # Change this before deploying! Required to access /admin.
-      ADMIN_KEY: ${TAGHUNT_ADMIN_KEY:?Set TAGHUNT_ADMIN_KEY in your .env file}
       DATA_DIR: /app/data
       # Number of reverse proxy hops in front of this container (default 1).
       TRUST_PROXY_HOPS: ${TAGHUNT_TRUST_PROXY_HOPS:-1}
     volumes:
-      - taghunt-data:/app/data
+      - taghuntdev-data:/app/data
 
 volumes:
-  taghunt-data:
+  taghuntdev-data:

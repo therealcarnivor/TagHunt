@@ -883,6 +883,105 @@ button.danger {
   transform: none;
 }
 
+.auth-form {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  margin-top: 1rem;
+  text-align: left;
+}
+
+.auth-field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--text-muted);
+}
+
+.auth-field input {
+  padding: 0.6rem 0.8rem;
+  border-radius: 8px;
+  border: 2px solid var(--border);
+  background: var(--card-bg);
+  color: var(--text);
+  font-size: 1rem;
+  font-weight: 400;
+}
+
+.auth-switch {
+  margin-top: 1rem;
+}
+
+.admin-page-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.admin-links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  margin-top: 0.75rem;
+}
+
+.stat-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(7rem, 1fr));
+  gap: 0.6rem;
+  margin-top: 0.75rem;
+}
+
+.stat-grid .stat-chip {
+  max-width: none;
+}
+
+.admin-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  margin-top: 0.25rem;
+}
+
+.admin-actions button {
+  padding: 0.35rem 0.7rem;
+  font-size: 0.85rem;
+}
+
+.disabled-card {
+  opacity: 0.6;
+}
+
+.muted-badge {
+  background: var(--secondary-button);
+}
+
+.reset-password-form {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  margin-top: 0.5rem;
+}
+
+.reset-password-form input {
+  flex: 1;
+  min-width: 10rem;
+  padding: 0.4rem 0.6rem;
+  border-radius: 8px;
+  border: 2px solid var(--border);
+  background: var(--card-bg);
+  color: var(--text);
+}
+
+.reset-password-form button {
+  padding: 0.35rem 0.7rem;
+  font-size: 0.85rem;
+}
+
 .scan-result {
   position: relative;
   overflow: hidden;

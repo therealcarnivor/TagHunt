@@ -1,60 +1,64 @@
 import { createContext, useCallback, useContext, useEffect, useState } from 'react';
-import { createPlayer, getPlayer, renamePlayer, updatePlayerAvatar } from '../api.js';
+import * as api from '../api.js';
 
 const PlayerContext = createContext(null);
-
-const ID_KEY = 'taghunt.playerId';
-const NAME_KEY = 'taghunt.playerName';
 
 export function PlayerProvider({ children }) {
   const [player, setPlayer] = useState(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const storedId = localStorage.getItem(ID_KEY);
-    const storedName = localStorage.getItem(NAME_KEY);
-    if (!storedId || !storedName) {
+    if (!api.getToken()) {
       setLoading(false);
       return;
     }
-    getPlayer(storedId)
-      .then((p) => setPlayer(p))
-      .catch(() => {
-        localStorage.removeItem(ID_KEY);
-        localStorage.removeItem(NAME_KEY);
-      })
+    api
+      .getMe()
+      .then((d) => setPlayer(d.player))
+      .catch(() => api.setToken(null))
       .finally(() => setLoading(false));
   }, []);
 
-  const join = useCallback(async (name) => {
-    const p = await createPlayer(name);
-    localStorage.setItem(ID_KEY, p.id);
-    localStorage.setItem(NAME_KEY, p.name);
-    setPlayer(p);
-    return p;
+  const signIn = useCallback(async (username, password) => {
+    const d = await api.login(username, password);
+    api.setToken(d.token);
+    setPlayer(d.player);
+    return d.player;
   }, []);
 
-  const leave = useCallback(() => {
-    localStorage.removeItem(ID_KEY);
-    localStorage.removeItem(NAME_KEY);
+  const signUp = useCallback(async (username, password, name) => {
+    const d = await api.register(username, password, name);
+    api.setToken(d.token);
+    setPlayer(d.player);
+    return d.player;
+  }, []);
+
+  const signOut = useCallback(async () => {
+    try {
+      await api.logout();
+    } catch {
+      // Signing out locally still matters even if the server call fails.
+    }
+    api.setToken(null);
     setPlayer(null);
   }, []);
 
   const rename = useCallback(async (name) => {
-    const p = await renamePlayer(player.id, name);
-    localStorage.setItem(NAME_KEY, p.name);
-    setPlayer(p);
+    const p = await api.updateMe({ name });
+    setPlayer((prev) => ({ ...prev, ...p }));
     return p;
-  }, [player]);
+  }, []);
 
   const setAvatar = useCallback(async (avatar) => {
-    const p = await updatePlayerAvatar(player.id, avatar);
-    setPlayer(p);
+    const p = await api.updateMe({ avatar });
+    setPlayer((prev) => ({ ...prev, ...p }));
     return p;
-  }, [player]);
+  }, []);
 
   return (
-    <PlayerContext.Provider value={{ player, loading, join, leave, rename, setAvatar }}>
+    <PlayerContext.Provider
+      value={{ player, loading, isAdmin: Boolean(player?.isAdmin), signIn, signUp, signOut, rename, setAvatar }}
+    >
       {children}
     </PlayerContext.Provider>
   );

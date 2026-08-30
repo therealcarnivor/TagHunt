@@ -1,60 +1,83 @@
 const BASE = '/api';
+const TOKEN_KEY = 'taghunt.token';
+
+export function getToken() {
+  return localStorage.getItem(TOKEN_KEY);
+}
+
+export function setToken(token) {
+  if (token) localStorage.setItem(TOKEN_KEY, token);
+  else localStorage.removeItem(TOKEN_KEY);
+}
 
 async function request(path, options = {}) {
+  const token = getToken();
   const res = await fetch(`${BASE}${path}`, {
     ...options,
-    headers: { 'Content-Type': 'application/json', ...(options.headers || {}) },
+    headers: {
+      'Content-Type': 'application/json',
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      ...(options.headers || {}),
+    },
   });
   const data = await res.json().catch(() => ({}));
   if (!res.ok) {
-    throw new Error(data.error || `Request failed (${res.status})`);
+    const error = new Error(data.error || `Request failed (${res.status})`);
+    error.status = res.status;
+    throw error;
   }
   return data;
 }
 
-export function createPlayer(name) {
-  return request('/players', { method: 'POST', body: JSON.stringify({ name }) });
+export function register(username, password, name) {
+  return request('/auth/register', { method: 'POST', body: JSON.stringify({ username, password, name }) });
 }
 
-export function getPlayer(id) {
-  return request(`/players/${id}`);
+export function login(username, password) {
+  return request('/auth/login', { method: 'POST', body: JSON.stringify({ username, password }) });
 }
 
-export function renamePlayer(id, name) {
-  return request(`/players/${id}`, { method: 'PATCH', body: JSON.stringify({ name }) });
+export function logout() {
+  return request('/auth/logout', { method: 'POST' });
 }
 
-export function updatePlayerAvatar(id, avatar) {
-  return request(`/players/${id}`, { method: 'PATCH', body: JSON.stringify({ avatar }) });
+export function getMe() {
+  return request('/auth/me');
 }
 
-export function getAvatarOptions(playerId) {
-  const suffix = playerId ? `?playerId=${encodeURIComponent(playerId)}` : '';
-  return request(`/players/avatars${suffix}`);
+export function changePassword(currentPassword, newPassword) {
+  return request('/auth/change-password', {
+    method: 'POST',
+    body: JSON.stringify({ currentPassword, newPassword }),
+  });
+}
+
+export function updateMe(body) {
+  return request('/players/me', { method: 'PATCH', body: JSON.stringify(body) });
+}
+
+export function getAvatarOptions() {
+  return request('/players/avatars');
 }
 
 export function getTagTotal() {
   return request('/tags');
 }
 
-export function getRoomsProgress(playerId) {
-  const suffix = playerId ? `?playerId=${encodeURIComponent(playerId)}` : '';
-  return request(`/tags/rooms-progress${suffix}`);
+export function getRoomsProgress() {
+  return request('/tags/rooms-progress');
 }
 
-export function scanTag(tagId, playerId) {
-  return request(`/tags/${encodeURIComponent(tagId)}/scan`, {
-    method: 'POST',
-    body: JSON.stringify({ playerId }),
-  });
+export function scanTag(tagId) {
+  return request(`/tags/${encodeURIComponent(tagId)}/scan`, { method: 'POST' });
 }
 
-export function getHint(playerId) {
-  return request(`/tags/hint?playerId=${encodeURIComponent(playerId)}`);
+export function getHint() {
+  return request('/tags/hint');
 }
 
-export function getFoundTags(playerId) {
-  return request(`/tags/found?playerId=${encodeURIComponent(playerId)}`);
+export function getFoundTags() {
+  return request('/tags/found');
 }
 
 export function getLeaderboard() {
@@ -65,14 +88,10 @@ export function getGameSettings() {
   return request('/game');
 }
 
-export function getAchievements(playerId) {
-  const suffix = playerId ? `?playerId=${encodeURIComponent(playerId)}` : '';
-  return request(`/achievements${suffix}`);
+export function getAchievements() {
+  return request('/achievements');
 }
 
-export function adminRequest(path, adminKey, options = {}) {
-  return request(`/admin${path}`, {
-    ...options,
-    headers: { 'x-admin-key': adminKey, ...(options.headers || {}) },
-  });
+export function adminRequest(path, options = {}) {
+  return request(`/admin${path}`, options);
 }

@@ -1,9 +1,9 @@
 import { useEffect, useState } from 'react';
 import { usePlayer } from '../context/PlayerContext.jsx';
-import { getFoundTags, getAvatarOptions } from '../api.js';
+import { getFoundTags, getAvatarOptions, changePassword } from '../api.js';
 
 export default function Profile() {
-  const { player, loading, rename, setAvatar } = usePlayer();
+  const { player, loading, rename, setAvatar, signOut } = usePlayer();
   const [found, setFound] = useState([]);
   const [fetchError, setFetchError] = useState('');
   const [name, setName] = useState('');
@@ -20,14 +20,14 @@ export default function Profile() {
 
   useEffect(() => {
     if (!player) return;
-    getFoundTags(player.id)
+    getFoundTags()
       .then((d) => setFound(d.found))
       .catch((err) => setFetchError(err.message));
   }, [player]);
 
   useEffect(() => {
     if (!player) return;
-    getAvatarOptions(player.id)
+    getAvatarOptions()
       .then((d) => {
         setAvatarOptions(d.avatars);
         setTakenAvatars(d.taken || []);
@@ -36,11 +36,12 @@ export default function Profile() {
   }, [player]);
 
   if (loading) return <p className="center-note">Loading...</p>;
-  if (!player) return <p className="center-note">Join the hunt from the home page first!</p>;
+  if (!player) return <p className="center-note">Sign in from the home page first!</p>;
 
   return (
     <div className="card">
       <h1>Your profile 🧑‍🚀</h1>
+      <p className="center-note">Signed in as @{player.username}</p>
 
       <section className="profile-section">
         <h2>Pick your avatar</h2>
@@ -130,6 +131,65 @@ export default function Profile() {
           </ul>
         )}
       </section>
+
+      <ChangePasswordSection />
+
+      <section className="profile-section">
+        <h2>Account</h2>
+        <button className="danger" onClick={signOut}>Sign out</button>
+      </section>
     </div>
+  );
+}
+
+function ChangePasswordSection() {
+  const [currentPassword, setCurrentPassword] = useState('');
+  const [newPassword, setNewPassword] = useState('');
+  const [busy, setBusy] = useState(false);
+  const [message, setMessage] = useState('');
+  const [error, setError] = useState('');
+
+  return (
+    <section className="profile-section">
+      <h2>Change password</h2>
+      <form
+        onSubmit={async (e) => {
+          e.preventDefault();
+          setError('');
+          setMessage('');
+          setBusy(true);
+          try {
+            await changePassword(currentPassword, newPassword);
+            setMessage('Password updated.');
+            setCurrentPassword('');
+            setNewPassword('');
+          } catch (err) {
+            setError(err.message);
+          } finally {
+            setBusy(false);
+          }
+        }}
+      >
+        <input
+          type="password"
+          value={currentPassword}
+          onChange={(e) => setCurrentPassword(e.target.value)}
+          placeholder="Current password"
+          autoComplete="current-password"
+        />
+        <input
+          type="password"
+          value={newPassword}
+          onChange={(e) => setNewPassword(e.target.value)}
+          placeholder="New password"
+          autoComplete="new-password"
+        />
+        <button type="submit" disabled={busy || !currentPassword || newPassword.length < 6}>
+          {busy ? 'Saving...' : 'Update'}
+        </button>
+      </form>
+      {message && <p className="hint-box">{message}</p>}
+      {error && <p className="error">{error}</p>}
+    </section>
   );
 }

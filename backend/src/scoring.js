@@ -16,9 +16,11 @@ export function computeFindPoints() {
   const { endTime, completedAt } = getGameWindow();
   const finds = db
     .prepare(
-            `SELECT player_id AS playerId, tag_id AS tagId, clues_used AS cluesUsed,
-              CAST(strftime('%s', found_at) AS INTEGER) * 1000 AS foundMs
-       FROM finds ORDER BY foundMs ASC, rowid ASC`
+            `SELECT f.player_id AS playerId, f.tag_id AS tagId, f.clues_used AS cluesUsed,
+              CAST(strftime('%s', f.found_at) AS INTEGER) * 1000 AS foundMs
+       FROM finds f JOIN tags t ON t.id = f.tag_id
+       WHERE t.is_enabled = 1
+       ORDER BY foundMs ASC, f.rowid ASC`
     )
     .all();
   if (finds.length === 0) return [];

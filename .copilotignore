@@ -1,0 +1,14 @@
+# Prevent Copilot from scanning your local SQLite database binary
+*.db
+*.sqlite
+*.sqlite3
+
+# Ignore heavy frontend node modules and compiler outputs
+node_modules/
+dist/
+build/
+.vite/
+
+# Ignore backend build environments
+.env
+.env.*

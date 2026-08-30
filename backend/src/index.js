@@ -5,6 +5,8 @@ import { fileURLToPath } from 'node:url';
 import { rateLimit } from 'express-rate-limit';
 
 import { db } from './db.js';
+import { attachPlayer } from './auth.js';
+import { authRouter } from './routes/auth.js';
 import { playersRouter } from './routes/players.js';
 import { tagsRouter } from './routes/tags.js';
 import { leaderboardRouter } from './routes/leaderboard.js';
@@ -61,6 +63,10 @@ app.use('/api/game', readLimiter);
 app.use('/api/achievements', readLimiter);
 app.use('/api', apiLimiter);
 
+// Resolves the session token into req.player for every API route.
+app.use('/api', attachPlayer);
+
+app.use('/api/auth', authRouter);
 app.use('/api/players', playersRouter);
 app.use('/api/tags', tagsRouter);
 app.use('/api/leaderboard', leaderboardRouter);

@@ -60,6 +60,13 @@ db.exec(`
     name TEXT NOT NULL,
     created_at TEXT NOT NULL DEFAULT (datetime('now'))
   );
+
+  CREATE TABLE IF NOT EXISTS sessions (
+    token_hash TEXT PRIMARY KEY,
+    player_id TEXT NOT NULL REFERENCES players(id),
+    expires_at TEXT NOT NULL,
+    created_at TEXT NOT NULL DEFAULT (datetime('now'))
+  );
 `);
 
 db.prepare('INSERT OR IGNORE INTO game_settings (id, start_time, end_time) VALUES (1, NULL, NULL)').run();
@@ -137,4 +144,38 @@ try {
   );
 } catch (err) {
   console.warn('Could not create unique player avatar index (likely pre-existing duplicates):', err.message);
+}
+
+// Account columns for the username/password login system. Players created
+// before this existed keep their progress, but need an admin password reset
+// before they can sign in again.
+if (!playerColumns.some((c) => c.name === 'username')) {
+  db.exec('ALTER TABLE players ADD COLUMN username TEXT');
+  db.exec("UPDATE players SET username = LOWER(REPLACE(name, ' ', '')) WHERE username IS NULL");
+}
+if (!playerColumns.some((c) => c.name === 'password_hash')) {
+  db.exec('ALTER TABLE players ADD COLUMN password_hash TEXT');
+}
+if (!playerColumns.some((c) => c.name === 'password_salt')) {
+  db.exec('ALTER TABLE players ADD COLUMN password_salt TEXT');
+}
+if (!playerColumns.some((c) => c.name === 'is_admin')) {
+  db.exec('ALTER TABLE players ADD COLUMN is_admin INTEGER NOT NULL DEFAULT 0');
+}
+if (!playerColumns.some((c) => c.name === 'is_active')) {
+  db.exec('ALTER TABLE players ADD COLUMN is_active INTEGER NOT NULL DEFAULT 1');
+}
+
+try {
+  db.exec(
+    `CREATE UNIQUE INDEX IF NOT EXISTS idx_players_username_nocase ON players (username COLLATE NOCASE) WHERE username IS NOT NULL;`
+  );
+} catch (err) {
+  console.warn('Could not create unique username index (likely pre-existing duplicates):', err.message);
+}
+
+// Disabled tags keep their row and printed URL but are excluded from
+// scoring, hints, totals and achievements.
+if (!tagColumns.some((c) => c.name === 'is_enabled')) {
+  db.exec('ALTER TABLE tags ADD COLUMN is_enabled INTEGER NOT NULL DEFAULT 1');
 }

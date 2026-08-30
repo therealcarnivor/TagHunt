@@ -8,8 +8,7 @@ import { playChime } from '../sound.js';
 
 export default function Scan() {
   const { tagId } = useParams();
-  const { player, loading, join } = usePlayer();
-  const [name, setName] = useState('');
+  const { player, loading } = usePlayer();
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
   const [result, setResult] = useState(null);
@@ -19,7 +18,7 @@ export default function Scan() {
     if (!player || result || busy) return;
     setBusy(true);
     setError('');
-    scanTag(tagId, player.id)
+    scanTag(tagId)
       .then((data) => {
         setResult(data);
         if (!data.alreadyFound) playChime();
@@ -29,43 +28,7 @@ export default function Scan() {
   }, [player, tagId, result, busy]);
 
   if (loading) return <p className="center-note">Loading...</p>;
-
-  if (!player) {
-    return (
-      <div className="card join-card">
-        <h1>Nice find! 🎉</h1>
-        <p>Tell us your name to record this tag.</p>
-        <form
-          onSubmit={async (e) => {
-            e.preventDefault();
-            setError('');
-            if (!name.trim()) return;
-            setBusy(true);
-            try {
-              await join(name.trim());
-            } catch (err) {
-              setError(err.message);
-            } finally {
-              setBusy(false);
-            }
-          }}
-        >
-          <input
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-            placeholder="Your name"
-            maxLength={30}
-            autoFocus
-          />
-          <button type="submit" disabled={busy || !name.trim()}>
-            {busy ? 'Joining...' : "That's me!"}
-          </button>
-        </form>
-        <p className="center-note">Already playing? Type the same name to pick up where you left off.</p>
-        {error && <p className="error">{error}</p>}
-      </div>
-    );
-  }
+  if (!player) return null;
 
   if (error) {
     return (

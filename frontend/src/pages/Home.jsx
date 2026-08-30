@@ -6,10 +6,8 @@ import ProgressBar from '../components/ProgressBar.jsx';
 import Countdown from '../components/Countdown.jsx';
 
 export default function Home() {
-  const { player, loading, join } = usePlayer();
-  const [name, setName] = useState('');
+  const { player, loading } = usePlayer();
   const [error, setError] = useState('');
-  const [busy, setBusy] = useState(false);
   const [totalTags, setTotalTags] = useState(0);
   const [found, setFound] = useState(0);
   const [hint, setHint] = useState(null);
@@ -38,13 +36,13 @@ export default function Home() {
           setFound(me ? me.tagsFound : 0);
         })
         .catch(() => {});
-      getAchievements(player.id)
+      getAchievements()
         .then((d) => {
           if (cancelled) return;
           setAchievements(d.achievements || []);
         })
         .catch(() => {});
-      getRoomsProgress(player.id)
+      getRoomsProgress()
         .then((d) => {
           if (cancelled) return;
           setRooms(d.rooms || []);
@@ -65,50 +63,7 @@ export default function Home() {
   }, [player]);
 
   if (loading) return <p className="center-note">Loading...</p>;
-
-  if (!player) {
-    return (
-      <div className="card join-card hero-card">
-        <div className="hero-icon">🕵️</div>
-        <h1 className="hero-title">Welcome to TagHunt!</h1>
-        <p>Enter your name to start hunting for hidden tags around the house.</p>
-        <Countdown
-          startTime={gameSettings.startTime}
-          endTime={gameSettings.endTime}
-          completedAt={gameSettings.completedAt}
-          winnerName={gameSettings.winnerName}
-        />
-        <form
-          onSubmit={async (e) => {
-            e.preventDefault();
-            setError('');
-            if (!name.trim()) return;
-            setBusy(true);
-            try {
-              await join(name.trim());
-            } catch (err) {
-              setError(err.message);
-            } finally {
-              setBusy(false);
-            }
-          }}
-        >
-          <input
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-            placeholder="Your name"
-            maxLength={30}
-            autoFocus
-          />
-          <button type="submit" disabled={busy || !name.trim()}>
-            {busy ? 'Joining...' : "Let's go! 🚀"}
-          </button>
-        </form>
-        <p className="center-note">Already playing? Type the same name to pick up where you left off.</p>
-        {error && <p className="error">{error}</p>}
-      </div>
-    );
-  }
+  if (!player) return null;
 
   return (
     <div className="card hero-card">
@@ -178,7 +133,7 @@ export default function Home() {
           setHintBusy(true);
           setError('');
           try {
-            const data = await getHint(player.id);
+            const data = await getHint();
             setHint(data.hint || "No clues left — you'll have to explore!");
           } catch (err) {
             setError(err.message);

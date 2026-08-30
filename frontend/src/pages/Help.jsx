@@ -6,14 +6,14 @@ export default function Help() {
       <section className="help-section">
         <h2>The basics</h2>
         <p>
-          Enter your name on the home page, then go find the hidden tags around
-          the house. Scanning a tag with your phone (NFC tap or QR code)
-          records it as found and adds it to your progress.
+          Create an account with a username and password, then go find the
+          hidden tags around the house. Scanning a tag with your phone (NFC tap
+          or QR code) records it as found and adds it to your progress.
         </p>
         <p>
-          Lost your progress after switching networks or reopening the app?
-          Just enter the <strong>same name</strong> again to reconnect to your
-          existing player instead of starting over.
+          Your progress is tied to your account, so you can sign in on any
+          device or browser and pick up exactly where you left off. If you
+          forget your password, ask an admin to reset it for you.
         </p>
       </section>
 

@@ -2,18 +2,14 @@ import { Router } from 'express';
 import { db } from '../db.js';
 import { notifyLeaderboardChanged } from '../sse.js';
 import { pointsForFind } from '../scoring.js';
+import { requireAuth } from '../auth.js';
 
 export const tagsRouter = Router();
 
-function getPlayer(playerId) {
-  if (typeof playerId !== 'string' || !playerId) return null;
-  return db.prepare('SELECT id, name FROM players WHERE id = ?').get(playerId);
-}
-
 function progressFor(playerId) {
-  const totalTags = db.prepare('SELECT COUNT(*) AS n FROM tags').get().n;
+  const totalTags = db.prepare('SELECT COUNT(*) AS n FROM tags WHERE is_enabled = 1').get().n;
   const found = db
-    .prepare('SELECT COUNT(*) AS n FROM finds WHERE player_id = ?')
+    .prepare('SELECT COUNT(*) AS n FROM finds f JOIN tags t ON t.id = f.tag_id WHERE f.player_id = ? AND t.is_enabled = 1')
     .get(playerId).n;
   return { totalTags, found };
 }
@@ -56,6 +52,7 @@ function pickHint(playerId) {
        JOIN tags t ON t.id = h.tag_id
        LEFT JOIN rooms r ON r.id = t.room_id
        WHERE h.player_id = ?
+         AND t.is_enabled = 1
          AND h.tag_id NOT IN (SELECT tag_id FROM finds WHERE player_id = ?)`
     )
     .get(playerId, playerId);
@@ -73,7 +70,8 @@ function pickHint(playerId) {
     .prepare(
       `SELECT t.id, r.name AS roomName, t.detail_clue AS detailClue
        FROM tags t LEFT JOIN rooms r ON r.id = t.room_id
-       WHERE (r.name IS NOT NULL OR (t.detail_clue IS NOT NULL AND TRIM(t.detail_clue) <> ''))
+       WHERE t.is_enabled = 1
+         AND (r.name IS NOT NULL OR (t.detail_clue IS NOT NULL AND TRIM(t.detail_clue) <> ''))
          AND t.id NOT IN (SELECT tag_id FROM finds WHERE player_id = ?)
        ORDER BY RANDOM() LIMIT 1`
     )
@@ -89,20 +87,20 @@ function pickHint(playerId) {
 
 // Total tag count, used by the client to render an overall progress bar.
 tagsRouter.get('/', (_req, res) => {
-  const total = db.prepare('SELECT COUNT(*) AS n FROM tags').get().n;
+  const total = db.prepare('SELECT COUNT(*) AS n FROM tags WHERE is_enabled = 1').get().n;
   res.json({ total });
 });
 
-// Progress breakdown by room for a player (or all rooms with tag counts).
+// Progress breakdown by room for the signed-in player.
 tagsRouter.get('/rooms-progress', (req, res) => {
-  const playerId = typeof req.query.playerId === 'string' ? req.query.playerId : '';
+  const playerId = req.player?.id ?? '';
   const rooms = db
     .prepare(
       `SELECT r.id, r.name,
               COUNT(DISTINCT t.id) AS total,
               COUNT(DISTINCT f.tag_id) AS found
        FROM rooms r
-       LEFT JOIN tags t ON t.room_id = r.id
+       LEFT JOIN tags t ON t.room_id = r.id AND t.is_enabled = 1
        LEFT JOIN finds f ON f.tag_id = t.id AND f.player_id = ?
        GROUP BY r.id, r.name
        ORDER BY r.name COLLATE NOCASE ASC`
@@ -121,46 +119,38 @@ tagsRouter.get('/rooms-progress', (req, res) => {
 });
 
 // A kid can request a fresh hint any time between finds.
-tagsRouter.get('/hint', (req, res) => {
-  const player = getPlayer(req.query.playerId);
-  if (!player) {
-    return res.status(401).json({ error: 'Unknown player. Please enter your name again.' });
-  }
+tagsRouter.get('/hint', requireAuth, (req, res) => {
   const blockReason = scanBlockReason(getGameSettings());
   if (blockReason) {
     return res.json({ hint: null });
   }
-  res.json({ hint: pickHint(player.id) });
+  res.json({ hint: pickHint(req.player.id) });
 });
 
 // List of tags a player has already found, for their profile page.
-tagsRouter.get('/found', (req, res) => {
-  const player = getPlayer(req.query.playerId);
-  if (!player) {
-    return res.status(401).json({ error: 'Unknown player. Please enter your name again.' });
-  }
+tagsRouter.get('/found', requireAuth, (req, res) => {
   const found = db
     .prepare(
       `SELECT t.id, t.name, f.found_at AS foundAt
        FROM finds f JOIN tags t ON t.id = f.tag_id
-       WHERE f.player_id = ?
+       WHERE f.player_id = ? AND t.is_enabled = 1
        ORDER BY f.found_at DESC`
     )
-    .all(player.id);
+    .all(req.player.id);
   res.json({ found });
 });
 
-// Called when a kid scans a physical tag. Body: { playerId }
-tagsRouter.post('/:tagId/scan', (req, res) => {
+// Called when a kid scans a physical tag.
+tagsRouter.post('/:tagId/scan', requireAuth, (req, res) => {
   const { tagId } = req.params;
-  const player = getPlayer(req.body?.playerId);
-  if (!player) {
-    return res.status(401).json({ error: 'Unknown player. Please enter your name again.' });
-  }
+  const player = req.player;
 
-  const tag = db.prepare('SELECT id, name, is_gold AS isGold FROM tags WHERE id = ?').get(tagId);
+  const tag = db.prepare('SELECT id, name, is_gold AS isGold, is_enabled AS isEnabled FROM tags WHERE id = ?').get(tagId);
   if (!tag) {
     return res.status(404).json({ error: 'This tag is not part of the hunt.' });
+  }
+  if (!tag.isEnabled) {
+    return res.status(403).json({ error: 'This tag is not active in the hunt right now.' });
   }
 
   const settings = getGameSettings();
