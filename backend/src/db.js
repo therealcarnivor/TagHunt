@@ -52,7 +52,11 @@ db.exec(`
     start_time TEXT,
     end_time TEXT,
     completed_at TEXT,
-    winner_player_id TEXT
+    winner_player_id TEXT,
+    no_clue_points INTEGER NOT NULL DEFAULT 3,
+    one_clue_points INTEGER NOT NULL DEFAULT 2,
+    two_clue_points INTEGER NOT NULL DEFAULT 1,
+    rate_limit_per_min INTEGER NOT NULL DEFAULT 1000
   );
 
   CREATE TABLE IF NOT EXISTS rooms (
@@ -68,8 +72,6 @@ db.exec(`
     created_at TEXT NOT NULL DEFAULT (datetime('now'))
   );
 `);
-
-db.prepare('INSERT OR IGNORE INTO game_settings (id, start_time, end_time) VALUES (1, NULL, NULL)').run();
 
 // Enforce unique player names case-insensitively. Wrapped in try/catch since
 // this can fail on databases created before this constraint existed if
@@ -124,11 +126,47 @@ if (!gameSettingsColumns.some((c) => c.name === 'winner_player_id')) {
   db.exec('ALTER TABLE game_settings ADD COLUMN winner_player_id TEXT');
 }
 
+// Migrate older databases created before the admin-settable clue scoring existed.
+if (!gameSettingsColumns.some((c) => c.name === 'no_clue_points')) {
+  db.exec('ALTER TABLE game_settings ADD COLUMN no_clue_points INTEGER NOT NULL DEFAULT 3');
+}
+if (!gameSettingsColumns.some((c) => c.name === 'one_clue_points')) {
+  db.exec('ALTER TABLE game_settings ADD COLUMN one_clue_points INTEGER NOT NULL DEFAULT 2');
+}
+if (!gameSettingsColumns.some((c) => c.name === 'two_clue_points')) {
+  db.exec('ALTER TABLE game_settings ADD COLUMN two_clue_points INTEGER NOT NULL DEFAULT 1');
+}
+
+db.exec('UPDATE game_settings SET no_clue_points = 3 WHERE no_clue_points IS NULL');
+db.exec('UPDATE game_settings SET one_clue_points = 2 WHERE one_clue_points IS NULL');
+db.exec('UPDATE game_settings SET two_clue_points = 1 WHERE two_clue_points IS NULL');
+
 // Migrate older databases created before the admin-settable rate limit existed.
 if (!gameSettingsColumns.some((c) => c.name === 'rate_limit_per_min')) {
   db.exec('ALTER TABLE game_settings ADD COLUMN rate_limit_per_min INTEGER');
   db.exec('UPDATE game_settings SET rate_limit_per_min = 1000 WHERE rate_limit_per_min IS NULL');
 }
+
+// Ensure the row exists with safe defaults for all game settings columns,
+// even when upgrading an older database that predates the new clue-scoring fields.
+db.prepare(
+  `INSERT OR IGNORE INTO game_settings (
+    id,
+    start_time,
+    end_time,
+    completed_at,
+    winner_player_id,
+    no_clue_points,
+    one_clue_points,
+    two_clue_points,
+    rate_limit_per_min
+  ) VALUES (1, NULL, NULL, NULL, NULL, 3, 2, 1, 1000)`
+).run();
+
+db.exec('UPDATE game_settings SET no_clue_points = 3 WHERE no_clue_points IS NULL');
+db.exec('UPDATE game_settings SET one_clue_points = 2 WHERE one_clue_points IS NULL');
+db.exec('UPDATE game_settings SET two_clue_points = 1 WHERE two_clue_points IS NULL');
+db.exec('UPDATE game_settings SET rate_limit_per_min = 1000 WHERE rate_limit_per_min IS NULL');
 
 // Migrate older databases created before the "avatar" column existed.
 const playerColumns = db.prepare("PRAGMA table_info(players)").all();

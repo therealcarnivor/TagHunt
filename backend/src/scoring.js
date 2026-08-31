@@ -14,6 +14,17 @@ function getGameWindow() {
 // single find that actually closed out the hunt.
 export function computeFindPoints() {
   const { endTime, completedAt } = getGameWindow();
+  const settings = db
+    .prepare(
+      'SELECT no_clue_points AS noCluePoints, one_clue_points AS oneCluePoints, two_clue_points AS twoCluePoints FROM game_settings WHERE id = 1'
+    )
+    .get() ?? { noCluePoints: 3, oneCluePoints: 2, twoCluePoints: 1 };
+  const cluePoints = {
+    0: settings.noCluePoints ?? 3,
+    1: settings.oneCluePoints ?? 2,
+    2: settings.twoCluePoints ?? 1,
+  };
+
   const finds = db
     .prepare(
             `SELECT f.player_id AS playerId, f.tag_id AS tagId, f.clues_used AS cluesUsed,
@@ -32,9 +43,9 @@ export function computeFindPoints() {
   const lastIndex = gameOver ? finds.length - 1 : -1;
 
   return finds.map((f, i) => {
-    let points = Math.max(1, 3 - Math.min(2, f.cluesUsed || 0));
+    let points = cluePoints[Math.min(2, f.cluesUsed || 0)] ?? cluePoints[2];
     if (tripleStartMs !== null && f.foundMs >= tripleStartMs && (endMs === null || f.foundMs <= endMs)) {
-      points = 3;
+      points = Math.max(3, points * 3);
     }
     if (i === lastIndex) points = 10;
     return { playerId: f.playerId, tagId: f.tagId, points, foundMs: f.foundMs, cluesUsed: f.cluesUsed || 0 };

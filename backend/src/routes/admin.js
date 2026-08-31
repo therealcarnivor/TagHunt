@@ -361,12 +361,23 @@ adminRouter.get('/settings', (_req, res) => {
   const row = db
     .prepare(
       `SELECT g.start_time AS startTime, g.end_time AS endTime, g.completed_at AS completedAt,
-              g.rate_limit_per_min AS rateLimitPerMin, p.name AS winnerName
+              g.no_clue_points AS noCluePoints, g.one_clue_points AS oneCluePoints,
+              g.two_clue_points AS twoCluePoints, g.rate_limit_per_min AS rateLimitPerMin,
+              p.name AS winnerName
        FROM game_settings g LEFT JOIN players p ON p.id = g.winner_player_id
        WHERE g.id = 1`
     )
     .get();
-  res.json(row || { startTime: null, endTime: null, completedAt: null, winnerName: null, rateLimitPerMin: 1000 });
+  res.json(row || {
+    startTime: null,
+    endTime: null,
+    completedAt: null,
+    winnerName: null,
+    noCluePoints: 3,
+    oneCluePoints: 2,
+    twoCluePoints: 1,
+    rateLimitPerMin: 1000,
+  });
 });
 
 adminRouter.put('/settings', (req, res) => {
@@ -379,6 +390,36 @@ adminRouter.put('/settings', (req, res) => {
     return res.status(400).json({ error: 'End time must be after the start time.' });
   }
 
+  let noCluePoints = req.body?.noCluePoints;
+  if (noCluePoints !== undefined) {
+    noCluePoints = Number(noCluePoints);
+    if (!Number.isInteger(noCluePoints) || noCluePoints < 0 || noCluePoints > 100) {
+      return res.status(400).json({ error: 'No-clue value must be a whole number between 0 and 100.' });
+    }
+  } else {
+    noCluePoints = db.prepare('SELECT no_clue_points AS v FROM game_settings WHERE id = 1').get().v;
+  }
+
+  let oneCluePoints = req.body?.oneCluePoints;
+  if (oneCluePoints !== undefined) {
+    oneCluePoints = Number(oneCluePoints);
+    if (!Number.isInteger(oneCluePoints) || oneCluePoints < 0 || oneCluePoints > 100) {
+      return res.status(400).json({ error: 'One-clue value must be a whole number between 0 and 100.' });
+    }
+  } else {
+    oneCluePoints = db.prepare('SELECT one_clue_points AS v FROM game_settings WHERE id = 1').get().v;
+  }
+
+  let twoCluePoints = req.body?.twoCluePoints;
+  if (twoCluePoints !== undefined) {
+    twoCluePoints = Number(twoCluePoints);
+    if (!Number.isInteger(twoCluePoints) || twoCluePoints < 0 || twoCluePoints > 100) {
+      return res.status(400).json({ error: 'Two-clue value must be a whole number between 0 and 100.' });
+    }
+  } else {
+    twoCluePoints = db.prepare('SELECT two_clue_points AS v FROM game_settings WHERE id = 1').get().v;
+  }
+
   let rateLimitPerMin;
   if (req.body?.rateLimitPerMin !== undefined) {
     rateLimitPerMin = Number(req.body.rateLimitPerMin);
@@ -389,11 +430,9 @@ adminRouter.put('/settings', (req, res) => {
     rateLimitPerMin = db.prepare('SELECT rate_limit_per_min AS v FROM game_settings WHERE id = 1').get().v;
   }
 
-  db.prepare('UPDATE game_settings SET start_time = ?, end_time = ?, rate_limit_per_min = ? WHERE id = 1').run(
-    startTime,
-    endTime,
-    rateLimitPerMin
-  );
-  res.json({ startTime, endTime, rateLimitPerMin });
+  db.prepare(
+    'UPDATE game_settings SET start_time = ?, end_time = ?, no_clue_points = ?, one_clue_points = ?, two_clue_points = ?, rate_limit_per_min = ? WHERE id = 1'
+  ).run(startTime, endTime, noCluePoints, oneCluePoints, twoCluePoints, rateLimitPerMin);
+  res.json({ startTime, endTime, noCluePoints, oneCluePoints, twoCluePoints, rateLimitPerMin });
 });
 

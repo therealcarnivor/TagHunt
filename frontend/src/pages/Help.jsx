@@ -1,4 +1,33 @@
+import { useEffect, useState } from 'react';
+import { adminRequest } from '../api.js';
+
 export default function Help() {
+  const [settings, setSettings] = useState({
+    noCluePoints: 3,
+    oneCluePoints: 2,
+    twoCluePoints: 1,
+  });
+
+  useEffect(() => {
+    let mounted = true;
+    adminRequest('/settings')
+      .then((data) => {
+        if (!mounted) return;
+        setSettings({
+          noCluePoints: data.noCluePoints ?? 3,
+          oneCluePoints: data.oneCluePoints ?? 2,
+          twoCluePoints: data.twoCluePoints ?? 1,
+        });
+      })
+      .catch(() => {
+        // Keep the built-in defaults if the settings request fails.
+      });
+
+    return () => {
+      mounted = false;
+    };
+  }, []);
+
   return (
     <div className="card help-card">
       <h1>How to play 🔎</h1>
@@ -40,9 +69,15 @@ export default function Help() {
       <section className="help-section">
         <h2>Scoring</h2>
         <ul>
-          <li>A tag found with <strong>no clues</strong> is worth <strong>3 points</strong>.</li>
-          <li>A tag found after using its room clue is worth <strong>2 points</strong>.</li>
-          <li>A tag found after using both clues is worth <strong>1 point</strong>.</li>
+          <li>
+            A tag found with <strong>no clues</strong> is worth <strong>{settings.noCluePoints} point{settings.noCluePoints === 1 ? '' : 's'}</strong>.
+          </li>
+          <li>
+            A tag found after using its room clue is worth <strong>{settings.oneCluePoints} point{settings.oneCluePoints === 1 ? '' : 's'}</strong>.
+          </li>
+          <li>
+            A tag found after using both clues is worth <strong>{settings.twoCluePoints} point{settings.twoCluePoints === 1 ? '' : 's'}</strong>.
+          </li>
           <li>
             Tags scanned in the <strong>last 30 minutes</strong> before the hunt's
             end time are worth <strong>triple points</strong>.

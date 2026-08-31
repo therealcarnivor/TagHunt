@@ -16,6 +16,9 @@ export default function Admin() {
   const [endTime, setEndTime] = useState('');
   const [completedAt, setCompletedAt] = useState(null);
   const [winnerName, setWinnerName] = useState(null);
+  const [noCluePoints, setNoCluePoints] = useState(3);
+  const [oneCluePoints, setOneCluePoints] = useState(2);
+  const [twoCluePoints, setTwoCluePoints] = useState(1);
   const [rateLimitPerMin, setRateLimitPerMin] = useState(1000);
   const [notice, setNotice] = useState('');
   const [busy, setBusy] = useState(false);
@@ -29,6 +32,9 @@ export default function Admin() {
         setEndTime(isoToLocalInput(s.endTime));
         setCompletedAt(s.completedAt);
         setWinnerName(s.winnerName);
+        setNoCluePoints(s.noCluePoints ?? 3);
+        setOneCluePoints(s.oneCluePoints ?? 2);
+        setTwoCluePoints(s.twoCluePoints ?? 1);
         setRateLimitPerMin(s.rateLimitPerMin ?? 1000);
         setStats(st);
       })
@@ -54,7 +60,7 @@ export default function Admin() {
 
   return (
     <div className="card admin-card">
-      <h1>Admin</h1>
+      <h1>Tag Hunt Admin</h1>
       {error && <p className="error">{error}</p>}
       {notice && <p className="hint-box">{notice}</p>}
 
@@ -83,45 +89,7 @@ export default function Admin() {
         </div>
       </section>
 
-      <section>
-        <h2>Party controls</h2>
-        <button
-          className="danger"
-          onClick={async () => {
-            if (!window.confirm('Reset the hunt? This clears all finds and hint history. Player accounts are kept.')) return;
-            setError('');
-            try {
-              await adminRequest('/reset', { method: 'POST' });
-              setNotice('Hunt reset. All finds cleared.');
-              refresh();
-            } catch (err) {
-              setError(err.message);
-            }
-          }}
-        >
-          Reset hunt (clear all finds)
-        </button>
 
-        {completedAt && (
-          <div className="hint-box" style={{ marginTop: '1rem' }}>
-            🏁 Hunt complete! {winnerName ? `${winnerName} found every tag first.` : ''} Scanning is locked.
-            <div style={{ marginTop: '0.5rem' }}>
-              <button
-                onClick={async () => {
-                  try {
-                    await adminRequest('/unlock', { method: 'POST' });
-                    refresh();
-                  } catch (err) {
-                    setError(err.message);
-                  }
-                }}
-              >
-                Unlock scanning
-              </button>
-            </div>
-          </div>
-        )}
-      </section>
 
       <section>
         <h2>Game timing</h2>
@@ -167,6 +135,105 @@ export default function Admin() {
       </section>
 
       <section>
+        <h2>Party controls</h2>
+        <button
+          className="danger"
+          onClick={async () => {
+            if (!window.confirm('Reset the hunt? This clears all finds and hint history. Player accounts are kept.')) return;
+            setError('');
+            try {
+              await adminRequest('/reset', { method: 'POST' });
+              setNotice('Hunt reset. All finds cleared.');
+              refresh();
+            } catch (err) {
+              setError(err.message);
+            }
+          }}
+        >
+          Reset hunt (clear all finds)
+        </button>
+
+        {completedAt && (
+          <div className="hint-box" style={{ marginTop: '1rem' }}>
+            🏁 Hunt complete! {winnerName ? `${winnerName} found every tag first.` : ''} Scanning is locked.
+            <div style={{ marginTop: '0.5rem' }}>
+              <button
+                onClick={async () => {
+                  try {
+                    await adminRequest('/unlock', { method: 'POST' });
+                    refresh();
+                  } catch (err) {
+                    setError(err.message);
+                  }
+                }}
+              >
+                Unlock scanning
+              </button>
+            </div>
+          </div>
+        )}
+      </section>
+
+      <section>
+        <h2>Hint scoring</h2>
+        <p className="center-note" style={{ textAlign: 'left' }}>
+          Set how many points a tag is worth depending on how many hints were used
+          before the scan. Defaults are 3 points with no clues, 2 with one clue,
+          and 1 with two clues.
+        </p>
+        <form
+          onSubmit={(e) => {
+            e.preventDefault();
+            saveSettings(
+              {
+                startTime: startTime ? new Date(startTime).toISOString() : null,
+                endTime: endTime ? new Date(endTime).toISOString() : null,
+                noCluePoints,
+                oneCluePoints,
+                twoCluePoints,
+              },
+              'Hint scoring saved.'
+            );
+          }}
+        >
+          <label className="timing-field">
+            No clues
+            <input
+              type="number"
+              min={0}
+              max={100}
+              step={1}
+              value={noCluePoints}
+              onChange={(e) => setNoCluePoints(Number(e.target.value))}
+            />
+          </label>
+          <label className="timing-field">
+            1 clue
+            <input
+              type="number"
+              min={0}
+              max={100}
+              step={1}
+              value={oneCluePoints}
+              onChange={(e) => setOneCluePoints(Number(e.target.value))}
+            />
+          </label>
+          <label className="timing-field">
+            2 clues
+            <input
+              type="number"
+              min={0}
+              max={100}
+              step={1}
+              value={twoCluePoints}
+              onChange={(e) => setTwoCluePoints(Number(e.target.value))}
+            />
+          </label>
+          <button type="submit" disabled={busy}>{busy ? 'Saving...' : 'Save scoring'}</button>
+        </form>
+      </section>
+
+      <section>
         <h2>Server rate limit</h2>
         <p className="center-note" style={{ textAlign: 'left' }}>
           Max requests per minute allowed from a single IP address. Raise this
@@ -180,6 +247,9 @@ export default function Admin() {
               {
                 startTime: startTime ? new Date(startTime).toISOString() : null,
                 endTime: endTime ? new Date(endTime).toISOString() : null,
+                noCluePoints,
+                oneCluePoints,
+                twoCluePoints,
                 rateLimitPerMin,
               },
               'Rate limit saved.'

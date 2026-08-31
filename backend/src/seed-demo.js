@@ -69,6 +69,9 @@ for (const dir of [rootData, backendData]) {
       end_time TEXT,
       completed_at TEXT,
       winner_player_id TEXT,
+      no_clue_points INTEGER NOT NULL DEFAULT 3,
+      one_clue_points INTEGER NOT NULL DEFAULT 2,
+      two_clue_points INTEGER NOT NULL DEFAULT 1,
       rate_limit_per_min INTEGER DEFAULT 1000
     );
 
@@ -83,7 +86,7 @@ for (const dir of [rootData, backendData]) {
   const startTime = new Date(now - 15 * 60 * 1000).toISOString();
   const endTime = new Date(now + 45 * 60 * 1000).toISOString();
 
-  db.prepare('INSERT OR REPLACE INTO game_settings (id, start_time, end_time, rate_limit_per_min) VALUES (1, ?, ?, 1000)').run(startTime, endTime);
+  db.prepare('INSERT OR REPLACE INTO game_settings (id, start_time, end_time, no_clue_points, one_clue_points, two_clue_points, rate_limit_per_min) VALUES (1, ?, ?, 3, 2, 1, 1000)').run(startTime, endTime);
 
   // Insert rooms
   const rooms = [
