@@ -10,6 +10,7 @@ export default function AdminTags() {
   const [newRoomId, setNewRoomId] = useState('');
   const [newDetailClue, setNewDetailClue] = useState('');
   const [newIsGold, setNewIsGold] = useState(false);
+  const [search, setSearch] = useState('');
 
   const refresh = () => {
     setError('');
@@ -25,6 +26,12 @@ export default function AdminTags() {
 
   const origin = window.location.origin;
   const enabledCount = tags.filter((t) => t.isEnabled).length;
+
+  const roomNameFor = (roomId) => rooms.find((r) => r.id === roomId)?.name || '';
+  const query = search.trim().toLowerCase();
+  const filteredTags = query
+    ? tags.filter((t) => t.name?.toLowerCase().includes(query) || roomNameFor(t.roomId).toLowerCase().includes(query))
+    : tags;
 
   return (
     <div className="card admin-card">
@@ -93,8 +100,14 @@ export default function AdminTags() {
 
       <section>
         <h2>Tags ({enabledCount} active of {tags.length})</h2>
+        <input
+          className="admin-search-input"
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          placeholder="Search by tag name or room"
+        />
         <div className="tag-grid">
-          {tags.map((t) => (
+          {filteredTags.map((t) => (
             <TagCard
               key={t.id}
               tag={t}
@@ -104,7 +117,9 @@ export default function AdminTags() {
               onError={setError}
             />
           ))}
-          {tags.length === 0 && <p className="center-note">No tags yet.</p>}
+          {filteredTags.length === 0 && (
+            <p className="center-note">{query ? 'No tags match your search.' : 'No tags yet.'}</p>
+          )}
         </div>
       </section>
     </div>
@@ -117,6 +132,10 @@ function TagCard({ tag, rooms, origin, onChanged, onError }) {
   const [isGold, setIsGold] = useState(tag.isGold);
   const [saving, setSaving] = useState(false);
   const [copied, setCopied] = useState(false);
+  const [editingId, setEditingId] = useState(false);
+  const [idValue, setIdValue] = useState(tag.id);
+  const [idError, setIdError] = useState('');
+  const [idSaving, setIdSaving] = useState(false);
   const dirty = roomId !== (tag.roomId || '') || detailClue !== (tag.detailClue || '') || isGold !== tag.isGold;
   const tagUrl = `${origin}/t/${tag.id}`;
 
@@ -153,6 +172,20 @@ function TagCard({ tag, rooms, origin, onChanged, onError }) {
       onError(err.message);
     } finally {
       setSaving(false);
+    }
+  };
+
+  const saveId = async () => {
+    setIdError('');
+    setIdSaving(true);
+    try {
+      await adminRequest(`/tags/${tag.id}/id`, { method: 'PATCH', body: JSON.stringify({ newId: idValue.trim() }) });
+      setEditingId(false);
+      onChanged();
+    } catch (err) {
+      setIdError(err.message);
+    } finally {
+      setIdSaving(false);
     }
   };
 
@@ -214,12 +247,43 @@ function TagCard({ tag, rooms, origin, onChanged, onError }) {
 
       <div className="tag-card-url">
         <span className="tag-card-url-label">Write this URL to the NFC tag:</span>
-        <div className="tag-card-url-row">
-          <span className="mono">{tagUrl}</span>
-          <button type="button" className="copy-button" onClick={copyUrl} title="Copy URL">
-            {copied ? '✅ Copied' : '📋 Copy'}
-          </button>
-        </div>
+        {editingId ? (
+          <div className="tag-card-url-row">
+            <span className="mono">{origin}/t/</span>
+            <input
+              className="tag-id-input"
+              value={idValue}
+              onChange={(e) => setIdValue(e.target.value)}
+              maxLength={40}
+              autoFocus
+            />
+            <button type="button" onClick={saveId} disabled={idSaving || !idValue.trim()}>
+              {idSaving ? 'Saving...' : 'Save'}
+            </button>
+            <button
+              type="button"
+              className="link-button"
+              onClick={() => {
+                setEditingId(false);
+                setIdValue(tag.id);
+                setIdError('');
+              }}
+            >
+              Cancel
+            </button>
+          </div>
+        ) : (
+          <div className="tag-card-url-row">
+            <span className="mono">{tagUrl}</span>
+            <button type="button" className="copy-button" onClick={copyUrl} title="Copy URL">
+              {copied ? '✅ Copied' : '📋 Copy'}
+            </button>
+            <button type="button" className="copy-button" onClick={() => setEditingId(true)} title="Edit tag URL">
+              ✏️ Edit
+            </button>
+          </div>
+        )}
+        {idError && <p className="error">{idError}</p>}
       </div>
     </div>
   );

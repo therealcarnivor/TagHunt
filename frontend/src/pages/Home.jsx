@@ -11,6 +11,7 @@ export default function Home() {
   const [error, setError] = useState('');
   const [totalTags, setTotalTags] = useState(0);
   const [found, setFound] = useState(0);
+  const [score, setScore] = useState(0);
   const [hints, setHints] = useState([]);
   const [hintNotice, setHintNotice] = useState('');
   const [hintBusy, setHintBusy] = useState(false);
@@ -37,6 +38,7 @@ export default function Home() {
           if (cancelled) return;
           const me = d.players.find((p) => p.playerId === player.id);
           setFound(me ? me.tagsFound : 0);
+          setScore(me ? me.score : 0);
         })
         .catch(() => {});
       getAchievements()
@@ -96,6 +98,10 @@ export default function Home() {
         <div className="stat-chip">
           <span className="stat-value">{Math.max(totalTags - found, 0)}</span>
           <span className="stat-label">Left</span>
+        </div>
+        <div className="stat-chip">
+          <span className="stat-value">{score}</span>
+          <span className="stat-label">Score</span>
         </div>
       </div>
 

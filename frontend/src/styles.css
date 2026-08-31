@@ -838,6 +838,17 @@ button.danger {
   min-width: 0;
 }
 
+.tag-id-input {
+  flex: 1;
+  min-width: 0;
+  padding: 0.3rem 0.5rem;
+  border-radius: 8px;
+  border: 2px solid var(--border);
+  background: var(--card-bg);
+  color: var(--text);
+  font-size: 0.9rem;
+}
+
 .copy-button {
   flex-shrink: 0;
   padding: 0.3rem 0.6rem;

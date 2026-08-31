@@ -7,6 +7,7 @@ export default function AdminRooms() {
   const [tags, setTags] = useState([]);
   const [newRoomName, setNewRoomName] = useState('');
   const [error, setError] = useState('');
+  const [search, setSearch] = useState('');
 
   const refresh = () => {
     setError('');
@@ -21,6 +22,9 @@ export default function AdminRooms() {
   useEffect(refresh, []);
 
   const tagCountFor = (roomId) => tags.filter((t) => t.roomId === roomId).length;
+
+  const query = search.trim().toLowerCase();
+  const filteredRooms = query ? rooms.filter((r) => r.name?.toLowerCase().includes(query)) : rooms;
 
   return (
     <div className="card admin-card">
@@ -60,9 +64,15 @@ export default function AdminRooms() {
       </section>
 
       <section>
-        <h2>Rooms ({rooms.length})</h2>
+        <h2>Rooms ({filteredRooms.length}{query ? ` of ${rooms.length}` : ''})</h2>
+        <input
+          className="admin-search-input"
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          placeholder="Search by room name"
+        />
         <div className="tag-grid">
-          {rooms.map((r) => (
+          {filteredRooms.map((r) => (
             <div key={r.id} className="tag-card">
               <div className="tag-card-header">
                 <span className="tag-card-name">🚪 {r.name}</span>
@@ -80,7 +90,7 @@ export default function AdminRooms() {
               <span className="row-sub">{tagCountFor(r.id)} tag(s) assigned</span>
             </div>
           ))}
-          {rooms.length === 0 && <p className="center-note">No rooms added yet.</p>}
+          {filteredRooms.length === 0 && <p className="center-note">{query ? 'No rooms match your search.' : 'No rooms added yet.'}</p>}
         </div>
       </section>
     </div>

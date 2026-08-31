@@ -141,6 +141,36 @@ adminRouter.patch('/tags/:id', (req, res) => {
   res.json({ ...updated, isGold: Boolean(updated.isGold), isEnabled: Boolean(updated.isEnabled) });
 });
 
+const TAG_ID_PATTERN = /^[A-Za-z0-9_-]{3,40}$/;
+
+// Lets you set the tag's own URL slug (the part after /t/) instead of the
+// random one it was created with, e.g. to match a label already printed.
+adminRouter.patch('/tags/:id/id', (req, res) => {
+  const existing = db.prepare('SELECT id FROM tags WHERE id = ?').get(req.params.id);
+  if (!existing) return res.status(404).json({ error: 'Tag not found.' });
+
+  const newId = typeof req.body?.newId === 'string' ? req.body.newId.trim() : '';
+  if (!TAG_ID_PATTERN.test(newId)) {
+    return res.status(400).json({ error: 'Tag URL must be 3-40 characters: letters, numbers, - or _.' });
+  }
+  if (newId === req.params.id) {
+    return res.json({ id: newId });
+  }
+  if (db.prepare('SELECT 1 FROM tags WHERE id = ?').get(newId)) {
+    return res.status(409).json({ error: 'That tag URL is already in use.' });
+  }
+
+  const renameTag = db.transaction((oldId, id) => {
+    db.prepare('UPDATE tags SET id = ? WHERE id = ?').run(id, oldId);
+    db.prepare('UPDATE finds SET tag_id = ? WHERE tag_id = ?').run(id, oldId);
+    db.prepare('UPDATE player_hints SET tag_id = ? WHERE tag_id = ?').run(id, oldId);
+    db.prepare('UPDATE hint_uses SET tag_id = ? WHERE tag_id = ?').run(id, oldId);
+  });
+  renameTag(req.params.id, newId);
+
+  notifyLeaderboardChanged();
+  res.json({ id: newId });
+});
 
 adminRouter.delete('/tags/:id', (req, res) => {
   db.prepare('DELETE FROM hint_uses WHERE tag_id = ?').run(req.params.id);
