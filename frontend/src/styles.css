@@ -136,6 +136,29 @@ body {
   overflow: hidden;
 }
 
+.party-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 6px;
+  background: linear-gradient(90deg, var(--primary), var(--secondary), var(--primary));
+  background-size: 200% 100%;
+  animation: party-stripe 3s linear infinite;
+}
+
+@keyframes party-stripe {
+  0% { background-position: 0% 0%; }
+  100% { background-position: 200% 0%; }
+}
+
+.party-emoji-row {
+  font-size: 1.3rem;
+  letter-spacing: 0.3rem;
+  margin: 0.1rem 0 0.4rem;
+}
+
 .hero-icon {
   font-size: 3rem;
   line-height: 1;
@@ -584,17 +607,25 @@ button.danger {
 
 .admin-card form {
   display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
   gap: 0.5rem;
   margin-bottom: 0.75rem;
 }
 
 .admin-card input {
-  flex: 1;
+  flex: 1 1 160px;
+  min-width: 0;
   padding: 0.5rem 0.7rem;
   border-radius: 8px;
   border: 2px solid var(--border);
   background: var(--card-bg);
   color: var(--text);
+}
+
+.admin-card form button.danger {
+  padding: 0.6rem 1.1rem;
+  font-size: 1rem;
 }
 
 .admin-card select {
@@ -661,6 +692,8 @@ button.danger {
 }
 
 .timing-field input {
+  flex: none;
+  width: 100%;
   padding: 0.45rem 0.6rem;
   border-radius: 8px;
   border: 2px solid var(--border);
@@ -716,6 +749,17 @@ button.danger {
   grid-template-columns: 1fr;
   gap: 0.9rem;
   margin-top: 1rem;
+}
+
+.admin-search-input {
+  width: 100%;
+  margin-top: 0.75rem;
+  padding: 0.5rem 0.7rem;
+  border-radius: 8px;
+  border: 2px solid var(--border);
+  background: var(--card-bg);
+  color: var(--text);
+  font-size: 1rem;
 }
 
 @media (min-width: 900px) {
@@ -879,11 +923,13 @@ button.danger {
 
 .profile-section form {
   display: flex;
+  flex-wrap: wrap;
   gap: 0.5rem;
 }
 
 .profile-section input {
-  flex: 1;
+  flex: 1 1 160px;
+  min-width: 0;
   padding: 0.5rem 0.7rem;
   border-radius: 8px;
   border: 2px solid var(--border);
@@ -974,6 +1020,14 @@ button.danger {
 
 .auth-switch {
   margin-top: 1rem;
+}
+
+.auth-submit {
+  padding: 0.8rem;
+  font-size: 1.1rem;
+  font-weight: 800;
+  border-radius: 10px;
+  background: linear-gradient(90deg, var(--secondary), var(--primary));
 }
 
 .admin-page-head {

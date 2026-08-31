@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { usePlayer } from '../context/PlayerContext.jsx';
+import Confetti from '../components/Confetti.jsx';
 
 export default function Login() {
   const { signIn, signUp } = usePlayer();
@@ -32,8 +33,10 @@ export default function Login() {
   };
 
   return (
-    <div className="card join-card hero-card">
-      <div className="hero-icon">🕵️</div>
+    <div className="card join-card hero-card party-card">
+      <Confetti />
+      <div className="hero-icon bounce">🕵️</div>
+      <div className="party-emoji-row" aria-hidden="true">🎉 🎈 🏆 🎈 🎉</div>
       <h1 className="hero-title">{isRegister ? 'Create your account' : 'Welcome back!'}</h1>
       <p>
         {isRegister
@@ -78,7 +81,7 @@ export default function Login() {
           />
         </label>
 
-        <button type="submit" disabled={busy || !username.trim() || !password}>
+        <button className="auth-submit" type="submit" disabled={busy || !username.trim() || !password}>
           {busy ? 'Please wait...' : isRegister ? 'Create account 🚀' : 'Sign in 🚀'}
         </button>
       </form>

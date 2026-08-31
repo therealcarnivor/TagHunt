@@ -6,6 +6,7 @@ export default function AdminPlayers() {
   const [players, setPlayers] = useState([]);
   const [error, setError] = useState('');
   const [notice, setNotice] = useState('');
+  const [search, setSearch] = useState('');
   const [selectedId, setSelectedId] = useState(null);
   const [newUsername, setNewUsername] = useState('');
   const [newName, setNewName] = useState('');
@@ -20,6 +21,11 @@ export default function AdminPlayers() {
   };
 
   useEffect(refresh, []);
+
+  const query = search.trim().toLowerCase();
+  const filteredPlayers = query
+    ? players.filter((p) => p.username?.toLowerCase().includes(query) || p.name?.toLowerCase().includes(query))
+    : players;
 
   const act = async (fn, successMessage) => {
     setError('');
@@ -97,9 +103,15 @@ export default function AdminPlayers() {
       </section>
 
       <section>
-        <h2>Accounts ({players.length})</h2>
+        <h2>Accounts ({filteredPlayers.length}{query ? ` of ${players.length}` : ''})</h2>
+        <input
+          className="admin-search-input"
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          placeholder="Search by username or display name"
+        />
         <div className="tag-grid">
-          {players.map((p) => (
+          {filteredPlayers.map((p) => (
             <div key={p.id} className={`tag-card${p.isActive ? '' : ' disabled-card'}`}>
               <div className="tag-card-header">
                 <span className="tag-card-name">
