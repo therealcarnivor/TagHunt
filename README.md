@@ -77,11 +77,8 @@ Visit http://localhost:5173, and http://localhost:5173/admin with admin key
 
 ## Notes on security
 
-- The admin key is required for all `/api/admin/*` routes and is never
-  exposed to regular players.
-- No accounts, passwords or email addresses are required. Players should use
-  a nickname rather than their real name. Player identity is represented by a random,
-  unguessable token stored in the browser.
-- Rate limiting is applied to the API to reduce abuse risk since the app can be
-  internet-facing during the party.
+- User authentication is handled with usernames and passwords (salted `scrypt` hashing). The first account registered automatically receives admin privileges.
+- All `/api/admin/*` routes are protected with role-based authorization (`requireAdmin`). Admins can promote/demote players and reset player passwords.
+- Player sessions use cryptographically random 32-byte bearer tokens stored as SHA-256 hashes in the database.
+- Configurable IP rate limiting is applied across API routes to mitigate abuse while accommodating multiple players on shared Wi-Fi or cellular networks.
 
