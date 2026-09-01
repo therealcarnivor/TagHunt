@@ -19,6 +19,7 @@ export default function Admin() {
   const [noCluePoints, setNoCluePoints] = useState(3);
   const [oneCluePoints, setOneCluePoints] = useState(2);
   const [twoCluePoints, setTwoCluePoints] = useState(1);
+  const [triplePointsMins, setTriplePointsMins] = useState(30);
   const [rateLimitPerMin, setRateLimitPerMin] = useState(1000);
   const [notice, setNotice] = useState('');
   const [busy, setBusy] = useState(false);
@@ -35,6 +36,7 @@ export default function Admin() {
         setNoCluePoints(s.noCluePoints ?? 3);
         setOneCluePoints(s.oneCluePoints ?? 2);
         setTwoCluePoints(s.twoCluePoints ?? 1);
+        setTriplePointsMins(s.triplePointsMins ?? 30);
         setRateLimitPerMin(s.rateLimitPerMin ?? 1000);
         setStats(st);
       })
@@ -179,7 +181,8 @@ export default function Admin() {
         <p className="center-note" style={{ textAlign: 'left' }}>
           Set how many points a tag is worth depending on how many hints were used
           before the scan. Defaults are 3 points with no clues, 2 with one clue,
-          and 1 with two clues.
+          and 1 with two clues. Tags scanned in the final minutes before the hunt's
+          end time are worth triple points.
         </p>
         <form
           onSubmit={(e) => {
@@ -191,6 +194,7 @@ export default function Admin() {
                 noCluePoints,
                 oneCluePoints,
                 twoCluePoints,
+                triplePointsMins,
               },
               'Hint scoring saved.'
             );
@@ -229,6 +233,17 @@ export default function Admin() {
               onChange={(e) => setTwoCluePoints(Number(e.target.value))}
             />
           </label>
+          <label className="timing-field">
+            Triple points window (mins before end)
+            <input
+              type="number"
+              min={0}
+              max={10080}
+              step={1}
+              value={triplePointsMins}
+              onChange={(e) => setTriplePointsMins(Number(e.target.value))}
+            />
+          </label>
           <button type="submit" disabled={busy}>{busy ? 'Saving...' : 'Save scoring'}</button>
         </form>
       </section>
@@ -250,6 +265,7 @@ export default function Admin() {
                 noCluePoints,
                 oneCluePoints,
                 twoCluePoints,
+                triplePointsMins,
                 rateLimitPerMin,
               },
               'Rate limit saved.'
@@ -282,3 +298,5 @@ function StatCard({ value, label }) {
     </div>
   );
 }
+
+

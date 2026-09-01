@@ -56,7 +56,8 @@ db.exec(`
     no_clue_points INTEGER NOT NULL DEFAULT 3,
     one_clue_points INTEGER NOT NULL DEFAULT 2,
     two_clue_points INTEGER NOT NULL DEFAULT 1,
-    rate_limit_per_min INTEGER NOT NULL DEFAULT 1000
+    rate_limit_per_min INTEGER NOT NULL DEFAULT 1000,
+    triple_points_mins INTEGER NOT NULL DEFAULT 30
   );
 
   CREATE TABLE IF NOT EXISTS rooms (
@@ -147,6 +148,12 @@ if (!gameSettingsColumns.some((c) => c.name === 'rate_limit_per_min')) {
   db.exec('UPDATE game_settings SET rate_limit_per_min = 1000 WHERE rate_limit_per_min IS NULL');
 }
 
+// Migrate older databases created before the admin-settable triple points window existed.
+if (!gameSettingsColumns.some((c) => c.name === 'triple_points_mins')) {
+  db.exec('ALTER TABLE game_settings ADD COLUMN triple_points_mins INTEGER NOT NULL DEFAULT 30');
+}
+db.exec('UPDATE game_settings SET triple_points_mins = 30 WHERE triple_points_mins IS NULL');
+
 // Ensure the row exists with safe defaults for all game settings columns,
 // even when upgrading an older database that predates the new clue-scoring fields.
 db.prepare(
@@ -159,14 +166,16 @@ db.prepare(
     no_clue_points,
     one_clue_points,
     two_clue_points,
-    rate_limit_per_min
-  ) VALUES (1, NULL, NULL, NULL, NULL, 3, 2, 1, 1000)`
+    rate_limit_per_min,
+    triple_points_mins
+  ) VALUES (1, NULL, NULL, NULL, NULL, 3, 2, 1, 1000, 30)`
 ).run();
 
 db.exec('UPDATE game_settings SET no_clue_points = 3 WHERE no_clue_points IS NULL');
 db.exec('UPDATE game_settings SET one_clue_points = 2 WHERE one_clue_points IS NULL');
 db.exec('UPDATE game_settings SET two_clue_points = 1 WHERE two_clue_points IS NULL');
 db.exec('UPDATE game_settings SET rate_limit_per_min = 1000 WHERE rate_limit_per_min IS NULL');
+db.exec('UPDATE game_settings SET triple_points_mins = 30 WHERE triple_points_mins IS NULL');
 
 // Migrate older databases created before the "avatar" column existed.
 const playerColumns = db.prepare("PRAGMA table_info(players)").all();

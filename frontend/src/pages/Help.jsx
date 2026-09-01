@@ -6,6 +6,7 @@ export default function Help() {
     noCluePoints: 3,
     oneCluePoints: 2,
     twoCluePoints: 1,
+    triplePointsMins: 30,
   });
 
   useEffect(() => {
@@ -17,6 +18,7 @@ export default function Help() {
           noCluePoints: data.noCluePoints ?? 3,
           oneCluePoints: data.oneCluePoints ?? 2,
           twoCluePoints: data.twoCluePoints ?? 1,
+          triplePointsMins: data.triplePointsMins ?? 30,
         });
       })
       .catch(() => {
@@ -78,10 +80,12 @@ export default function Help() {
           <li>
             A tag found after using both clues is worth <strong>{settings.twoCluePoints} point{settings.twoCluePoints === 1 ? '' : 's'}</strong>.
           </li>
-          <li>
-            Tags scanned in the <strong>last 30 minutes</strong> before the hunt's
-            end time are worth <strong>triple points</strong>.
-          </li>
+          {settings.triplePointsMins > 0 && (
+            <li>
+              Tags scanned in the <strong>last {settings.triplePointsMins} minute{settings.triplePointsMins === 1 ? '' : 's'}</strong> before the hunt's
+              end time are worth <strong>triple points</strong>.
+            </li>
+          )}
           <li>
             The <strong>very last tag</strong> collected before time runs out (or
             the one that completes the whole hunt) is worth <strong>10 points</strong>.

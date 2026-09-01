@@ -1,7 +1,5 @@
 import { db } from './db.js';
 
-const THIRTY_MIN_MS = 30 * 60 * 1000;
-
 function getGameWindow() {
   return db
     .prepare('SELECT end_time AS endTime, completed_at AS completedAt FROM game_settings WHERE id = 1')
@@ -10,20 +8,21 @@ function getGameWindow() {
 
 // Computes the points earned for every recorded find, applying the scoring
 // rules: 3 points with no clues, 2 with one clue, 1 with both clues, tripled
-// inside the final 30 minutes before the end time, and 10 points for the
+// inside the final configured minutes window before the end time, and 10 points for the
 // single find that actually closed out the hunt.
 export function computeFindPoints() {
   const { endTime, completedAt } = getGameWindow();
   const settings = db
     .prepare(
-      'SELECT no_clue_points AS noCluePoints, one_clue_points AS oneCluePoints, two_clue_points AS twoCluePoints FROM game_settings WHERE id = 1'
+      'SELECT no_clue_points AS noCluePoints, one_clue_points AS oneCluePoints, two_clue_points AS twoCluePoints, triple_points_mins AS triplePointsMins FROM game_settings WHERE id = 1'
     )
-    .get() ?? { noCluePoints: 3, oneCluePoints: 2, twoCluePoints: 1 };
+    .get() ?? { noCluePoints: 3, oneCluePoints: 2, twoCluePoints: 1, triplePointsMins: 30 };
   const cluePoints = {
     0: settings.noCluePoints ?? 3,
     1: settings.oneCluePoints ?? 2,
     2: settings.twoCluePoints ?? 1,
   };
+  const tripleWindowMs = (settings.triplePointsMins ?? 30) * 60 * 1000;
 
   const finds = db
     .prepare(
@@ -39,7 +38,7 @@ export function computeFindPoints() {
   const endMs = endTime ? new Date(endTime).getTime() : null;
   const completedMs = completedAt ? new Date(completedAt).getTime() : null;
   const gameOver = Boolean(completedMs) || (endMs !== null && Date.now() > endMs);
-  const tripleStartMs = endMs !== null ? endMs - THIRTY_MIN_MS : null;
+  const tripleStartMs = endMs !== null && tripleWindowMs > 0 ? endMs - tripleWindowMs : null;
   const lastIndex = gameOver ? finds.length - 1 : -1;
 
   return finds.map((f, i) => {

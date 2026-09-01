@@ -363,6 +363,7 @@ adminRouter.get('/settings', (_req, res) => {
       `SELECT g.start_time AS startTime, g.end_time AS endTime, g.completed_at AS completedAt,
               g.no_clue_points AS noCluePoints, g.one_clue_points AS oneCluePoints,
               g.two_clue_points AS twoCluePoints, g.rate_limit_per_min AS rateLimitPerMin,
+              g.triple_points_mins AS triplePointsMins,
               p.name AS winnerName
        FROM game_settings g LEFT JOIN players p ON p.id = g.winner_player_id
        WHERE g.id = 1`
@@ -377,6 +378,7 @@ adminRouter.get('/settings', (_req, res) => {
     oneCluePoints: 2,
     twoCluePoints: 1,
     rateLimitPerMin: 1000,
+    triplePointsMins: 30,
   });
 });
 
@@ -420,6 +422,16 @@ adminRouter.put('/settings', (req, res) => {
     twoCluePoints = db.prepare('SELECT two_clue_points AS v FROM game_settings WHERE id = 1').get().v;
   }
 
+  let triplePointsMins = req.body?.triplePointsMins;
+  if (triplePointsMins !== undefined) {
+    triplePointsMins = Number(triplePointsMins);
+    if (!Number.isInteger(triplePointsMins) || triplePointsMins < 0 || triplePointsMins > 10080) {
+      return res.status(400).json({ error: 'Triple points window must be a whole number between 0 and 10080 minutes.' });
+    }
+  } else {
+    triplePointsMins = db.prepare('SELECT triple_points_mins AS v FROM game_settings WHERE id = 1').get()?.v ?? 30;
+  }
+
   let rateLimitPerMin;
   if (req.body?.rateLimitPerMin !== undefined) {
     rateLimitPerMin = Number(req.body.rateLimitPerMin);
@@ -431,8 +443,8 @@ adminRouter.put('/settings', (req, res) => {
   }
 
   db.prepare(
-    'UPDATE game_settings SET start_time = ?, end_time = ?, no_clue_points = ?, one_clue_points = ?, two_clue_points = ?, rate_limit_per_min = ? WHERE id = 1'
-  ).run(startTime, endTime, noCluePoints, oneCluePoints, twoCluePoints, rateLimitPerMin);
-  res.json({ startTime, endTime, noCluePoints, oneCluePoints, twoCluePoints, rateLimitPerMin });
+    'UPDATE game_settings SET start_time = ?, end_time = ?, no_clue_points = ?, one_clue_points = ?, two_clue_points = ?, rate_limit_per_min = ?, triple_points_mins = ? WHERE id = 1'
+  ).run(startTime, endTime, noCluePoints, oneCluePoints, twoCluePoints, rateLimitPerMin, triplePointsMins);
+  res.json({ startTime, endTime, noCluePoints, oneCluePoints, twoCluePoints, rateLimitPerMin, triplePointsMins });
 });
 
