@@ -20,6 +20,7 @@ export default function Admin() {
   const [oneCluePoints, setOneCluePoints] = useState(2);
   const [twoCluePoints, setTwoCluePoints] = useState(1);
   const [triplePointsMins, setTriplePointsMins] = useState(30);
+  const [completionPlayerLimit, setCompletionPlayerLimit] = useState(0);
   const [rateLimitPerMin, setRateLimitPerMin] = useState(1000);
   const [notice, setNotice] = useState('');
   const [busy, setBusy] = useState(false);
@@ -37,6 +38,7 @@ export default function Admin() {
         setOneCluePoints(s.oneCluePoints ?? 2);
         setTwoCluePoints(s.twoCluePoints ?? 1);
         setTriplePointsMins(s.triplePointsMins ?? 30);
+        setCompletionPlayerLimit(s.completionPlayerLimit ?? 0);
         setRateLimitPerMin(s.rateLimitPerMin ?? 1000);
         setStats(st);
       })
@@ -98,7 +100,8 @@ export default function Admin() {
         <p className="center-note" style={{ textAlign: 'left' }}>
           Optional — set a start/end time to show a countdown on the home page.
           Scans outside this window won't count. Leave blank for no timer.
-          Scanning also auto-locks the moment someone finds every tag.
+          Set a completion limit to end the hunt after that many players have
+          found every tag.
         </p>
         <form
           onSubmit={(e) => {
@@ -119,6 +122,17 @@ export default function Admin() {
           <label className="timing-field">
             End
             <input type="datetime-local" value={endTime} onChange={(e) => setEndTime(e.target.value)} />
+          </label>
+          <label className="timing-field">
+            Players to complete hunt (0 = end time only)
+            <input
+              type="number"
+              min={0}
+              max={1000}
+              step={1}
+              value={completionPlayerLimit}
+              onChange={(e) => setCompletionPlayerLimit(Number(e.target.value))}
+            />
           </label>
           <button type="submit" disabled={busy}>{busy ? 'Saving...' : 'Save timing'}</button>
           <button
@@ -195,6 +209,7 @@ export default function Admin() {
                 oneCluePoints,
                 twoCluePoints,
                 triplePointsMins,
+                completionPlayerLimit,
               },
               'Hint scoring saved.'
             );

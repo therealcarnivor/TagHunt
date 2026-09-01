@@ -57,7 +57,8 @@ db.exec(`
     one_clue_points INTEGER NOT NULL DEFAULT 2,
     two_clue_points INTEGER NOT NULL DEFAULT 1,
     rate_limit_per_min INTEGER NOT NULL DEFAULT 1000,
-    triple_points_mins INTEGER NOT NULL DEFAULT 30
+    triple_points_mins INTEGER NOT NULL DEFAULT 30,
+    completion_player_limit INTEGER NOT NULL DEFAULT 0
   );
 
   CREATE TABLE IF NOT EXISTS rooms (
@@ -154,6 +155,11 @@ if (!gameSettingsColumns.some((c) => c.name === 'triple_points_mins')) {
 }
 db.exec('UPDATE game_settings SET triple_points_mins = 30 WHERE triple_points_mins IS NULL');
 
+if (!gameSettingsColumns.some((c) => c.name === 'completion_player_limit')) {
+  db.exec('ALTER TABLE game_settings ADD COLUMN completion_player_limit INTEGER NOT NULL DEFAULT 0');
+}
+db.exec('UPDATE game_settings SET completion_player_limit = 0 WHERE completion_player_limit IS NULL');
+
 // Ensure the row exists with safe defaults for all game settings columns,
 // even when upgrading an older database that predates the new clue-scoring fields.
 db.prepare(
@@ -167,8 +173,9 @@ db.prepare(
     one_clue_points,
     two_clue_points,
     rate_limit_per_min,
-    triple_points_mins
-  ) VALUES (1, NULL, NULL, NULL, NULL, 3, 2, 1, 1000, 30)`
+    triple_points_mins,
+    completion_player_limit
+  ) VALUES (1, NULL, NULL, NULL, NULL, 3, 2, 1, 1000, 30, 0)`
 ).run();
 
 db.exec('UPDATE game_settings SET no_clue_points = 3 WHERE no_clue_points IS NULL');
@@ -176,6 +183,7 @@ db.exec('UPDATE game_settings SET one_clue_points = 2 WHERE one_clue_points IS N
 db.exec('UPDATE game_settings SET two_clue_points = 1 WHERE two_clue_points IS NULL');
 db.exec('UPDATE game_settings SET rate_limit_per_min = 1000 WHERE rate_limit_per_min IS NULL');
 db.exec('UPDATE game_settings SET triple_points_mins = 30 WHERE triple_points_mins IS NULL');
+db.exec('UPDATE game_settings SET completion_player_limit = 0 WHERE completion_player_limit IS NULL');
 
 // Migrate older databases created before the "avatar" column existed.
 const playerColumns = db.prepare("PRAGMA table_info(players)").all();

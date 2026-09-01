@@ -8,11 +8,12 @@ export const gameRouter = Router();
 gameRouter.get('/', (_req, res) => {
   const row = db
     .prepare(
-      `SELECT g.start_time AS startTime, g.end_time AS endTime, g.completed_at AS completedAt,
+            `SELECT g.start_time AS startTime, g.end_time AS endTime, g.completed_at AS completedAt,
+              g.completion_player_limit AS completionPlayerLimit,
               p.name AS winnerName
        FROM game_settings g LEFT JOIN players p ON p.id = g.winner_player_id
        WHERE g.id = 1`
     )
     .get();
-  res.json(row || { startTime: null, endTime: null, completedAt: null, winnerName: null });
+  res.json(row || { startTime: null, endTime: null, completedAt: null, completionPlayerLimit: 0, winnerName: null });
 });

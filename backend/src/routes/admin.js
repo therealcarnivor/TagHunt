@@ -364,6 +364,7 @@ adminRouter.get('/settings', (_req, res) => {
               g.no_clue_points AS noCluePoints, g.one_clue_points AS oneCluePoints,
               g.two_clue_points AS twoCluePoints, g.rate_limit_per_min AS rateLimitPerMin,
               g.triple_points_mins AS triplePointsMins,
+              g.completion_player_limit AS completionPlayerLimit,
               p.name AS winnerName
        FROM game_settings g LEFT JOIN players p ON p.id = g.winner_player_id
        WHERE g.id = 1`
@@ -379,6 +380,7 @@ adminRouter.get('/settings', (_req, res) => {
     twoCluePoints: 1,
     rateLimitPerMin: 1000,
     triplePointsMins: 30,
+    completionPlayerLimit: 0,
   });
 });
 
@@ -432,6 +434,16 @@ adminRouter.put('/settings', (req, res) => {
     triplePointsMins = db.prepare('SELECT triple_points_mins AS v FROM game_settings WHERE id = 1').get()?.v ?? 30;
   }
 
+  let completionPlayerLimit = req.body?.completionPlayerLimit;
+  if (completionPlayerLimit !== undefined) {
+    completionPlayerLimit = Number(completionPlayerLimit);
+    if (!Number.isInteger(completionPlayerLimit) || completionPlayerLimit < 0 || completionPlayerLimit > 1000) {
+      return res.status(400).json({ error: 'Completion player limit must be a whole number between 0 and 1000.' });
+    }
+  } else {
+    completionPlayerLimit = db.prepare('SELECT completion_player_limit AS v FROM game_settings WHERE id = 1').get()?.v ?? 0;
+  }
+
   let rateLimitPerMin;
   if (req.body?.rateLimitPerMin !== undefined) {
     rateLimitPerMin = Number(req.body.rateLimitPerMin);
@@ -443,8 +455,8 @@ adminRouter.put('/settings', (req, res) => {
   }
 
   db.prepare(
-    'UPDATE game_settings SET start_time = ?, end_time = ?, no_clue_points = ?, one_clue_points = ?, two_clue_points = ?, rate_limit_per_min = ?, triple_points_mins = ? WHERE id = 1'
-  ).run(startTime, endTime, noCluePoints, oneCluePoints, twoCluePoints, rateLimitPerMin, triplePointsMins);
-  res.json({ startTime, endTime, noCluePoints, oneCluePoints, twoCluePoints, rateLimitPerMin, triplePointsMins });
+    'UPDATE game_settings SET start_time = ?, end_time = ?, no_clue_points = ?, one_clue_points = ?, two_clue_points = ?, rate_limit_per_min = ?, triple_points_mins = ?, completion_player_limit = ?, completed_at = CASE WHEN ? = 0 THEN NULL ELSE completed_at END, winner_player_id = CASE WHEN ? = 0 THEN NULL ELSE winner_player_id END WHERE id = 1'
+  ).run(startTime, endTime, noCluePoints, oneCluePoints, twoCluePoints, rateLimitPerMin, triplePointsMins, completionPlayerLimit, completionPlayerLimit, completionPlayerLimit);
+  res.json({ startTime, endTime, noCluePoints, oneCluePoints, twoCluePoints, rateLimitPerMin, triplePointsMins, completionPlayerLimit });
 });
 

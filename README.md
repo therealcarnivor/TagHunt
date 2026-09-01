@@ -63,7 +63,7 @@ Visit http://localhost:5173 and register the first account to make it an adminis
 
 ## Setting up tags
 
-1. Go to `https://taghunt.domain-name.com/admin`, enter your admin key.
+1. Go to `https://taghunt.domain-name.com/admin/tags`.
 2. Add a tag for each hiding spot (e.g. "Kitchen Cupboard"). Each gets a
    unique URL like `https://taghunt.domain-name.com/t/ab12cd34`.
 3. Write that exact URL to an NFC tag using any NFC-writing app (e.g. NFC

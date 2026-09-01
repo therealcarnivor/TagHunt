@@ -16,7 +16,7 @@ function progressFor(playerId) {
 
 function getGameSettings() {
   return db
-    .prepare('SELECT start_time AS startTime, end_time AS endTime, completed_at AS completedAt, winner_player_id AS winnerPlayerId FROM game_settings WHERE id = 1')
+    .prepare('SELECT start_time AS startTime, end_time AS endTime, completed_at AS completedAt, winner_player_id AS winnerPlayerId, completion_player_limit AS completionPlayerLimit FROM game_settings WHERE id = 1')
     .get();
 }
 
@@ -219,13 +219,26 @@ tagsRouter.post('/:tagId/scan', requireAuth, (req, res) => {
     notifyLeaderboardChanged();
 
     const progress = progressFor(player.id);
-    if (progress.totalTags > 0 && progress.found === progress.totalTags) {
-      db.prepare('UPDATE game_settings SET completed_at = ?, winner_player_id = ? WHERE id = 1').run(
-        new Date().toISOString(),
-        player.id
-      );
-      gameJustCompleted = true;
-      notifyLeaderboardChanged();
+    if (progress.totalTags > 0 && progress.found === progress.totalTags && settings.completionPlayerLimit > 0) {
+      const completedPlayers = db
+        .prepare(
+          `SELECT COUNT(*) AS n FROM (
+             SELECT f.player_id
+             FROM finds f JOIN tags t ON t.id = f.tag_id
+             WHERE t.is_enabled = 1
+             GROUP BY f.player_id
+             HAVING COUNT(DISTINCT f.tag_id) = ?
+           )`
+        )
+        .get(progress.totalTags).n;
+      if (completedPlayers >= settings.completionPlayerLimit) {
+        db.prepare('UPDATE game_settings SET completed_at = ?, winner_player_id = ? WHERE id = 1').run(
+          new Date().toISOString(),
+          player.id
+        );
+        gameJustCompleted = true;
+        notifyLeaderboardChanged();
+      }
     }
   }
 

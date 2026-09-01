@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { adminRequest } from '../api.js';
+import { getGameSettings } from '../api.js';
 
 export default function Help() {
   const [settings, setSettings] = useState({
@@ -7,11 +7,12 @@ export default function Help() {
     oneCluePoints: 2,
     twoCluePoints: 1,
     triplePointsMins: 30,
+    completionPlayerLimit: 0,
   });
 
   useEffect(() => {
     let mounted = true;
-    adminRequest('/settings')
+    getGameSettings()
       .then((data) => {
         if (!mounted) return;
         setSettings({
@@ -19,6 +20,7 @@ export default function Help() {
           oneCluePoints: data.oneCluePoints ?? 2,
           twoCluePoints: data.twoCluePoints ?? 1,
           triplePointsMins: data.triplePointsMins ?? 30,
+          completionPlayerLimit: data.completionPlayerLimit ?? 0,
         });
       })
       .catch(() => {
@@ -87,8 +89,8 @@ export default function Help() {
             </li>
           )}
           <li>
-            The <strong>very last tag</strong> collected before time runs out (or
-            the one that completes the whole hunt) is worth <strong>10 points</strong>.
+            The <strong>very last tag</strong> collected before time runs out is
+            worth <strong>10 points</strong>.
           </li>
         </ul>
         <p>Check the leaderboard any time to see everyone's score and progress.</p>
@@ -139,8 +141,10 @@ export default function Help() {
         <h2>Timing</h2>
         <p>
           If the host has set a start/end time, the home page shows a countdown.
-          Scans outside that window don't count. The hunt also auto-locks the
-          moment someone finds every tag — nobody can score any more after that.
+          Scans outside that window don't count.{' '}
+          {settings.completionPlayerLimit > 0
+            ? `Tags can be found and scored until ${settings.completionPlayerLimit} player${settings.completionPlayerLimit === 1 ? '' : 's'} have found every tag, or the end time is reached.`
+            : 'Tags can be found and scored until the end time, if one has been set.'}
         </p>
       </section>
     </div>
