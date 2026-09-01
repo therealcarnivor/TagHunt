@@ -47,7 +47,7 @@ Visit http://localhost:5173, and http://localhost:5173/admin with admin key
 
 ## Deploying with Docker
 
-1. Copy `.env.example` to `.env` and set a strong `TAGHUNT_ADMIN_KEY`.
+1. Copy the project to the host where you’ll run the game.
 2. Build and run:
 
    ```powershell
