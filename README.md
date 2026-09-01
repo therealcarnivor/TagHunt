@@ -33,7 +33,6 @@ This game is only intended for self-hosted fun
 # Terminal 1 - backend (serves the API on :3000)
 cd backend
 npm install
-$env:ADMIN_KEY = "local-dev-only-change-me"
 npm run dev
 
 # Terminal 2 - frontend (dev server on :5173, proxies /api to :3000)
@@ -42,8 +41,7 @@ npm install
 npm run dev
 ```
 
-Visit http://localhost:5173, and http://localhost:5173/admin with admin key
-`dev-secret`.
+Visit http://localhost:5173 and register the first account to make it an administrator.
 
 ## Deploying with Docker
 
