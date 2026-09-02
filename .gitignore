@@ -9,3 +9,4 @@ data/
 *.db-wal
 *.log
 .copilotignore
+.continue/
