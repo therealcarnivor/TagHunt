@@ -9,4 +9,8 @@ data/
 *.db-wal
 *.log
 .copilotignore
-.continue/
+.continue/agents/*
+.continue/models/*
+.continue/sessions/*
+.continue/cache/*
+.continue/tmp/*
